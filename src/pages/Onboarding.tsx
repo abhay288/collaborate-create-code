@@ -1,0 +1,272 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowRight, ArrowLeft, Upload } from "lucide-react";
+import { toast } from "sonner";
+
+const Onboarding = () => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const totalSteps = 4;
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    age: "",
+    educationLevel: "",
+    bio: "",
+    interests: [] as string[],
+    goals: [] as string[],
+    profilePicture: ""
+  });
+
+  const interests = [
+    "Technology", "Science", "Arts", "Business", "Healthcare",
+    "Engineering", "Education", "Sports", "Music", "Writing"
+  ];
+
+  const goals = [
+    "Find the right career path",
+    "Explore college options",
+    "Discover scholarships",
+    "Improve my skills",
+    "Plan my future"
+  ];
+
+  const toggleInterest = (interest: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
+    }));
+  };
+
+  const toggleGoal = (goal: string) => {
+    setFormData(prev => ({
+      ...prev,
+      goals: prev.goals.includes(goal)
+        ? prev.goals.filter(g => g !== goal)
+        : [...prev.goals, goal]
+    }));
+  };
+
+  const handleNext = () => {
+    if (step < totalSteps) {
+      setStep(step + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleSkip = () => {
+    navigate("/dashboard");
+  };
+
+  const handleComplete = () => {
+    toast.success("Profile setup complete!");
+    navigate("/dashboard");
+  };
+
+  const progress = (step / totalSteps) * 100;
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <CardTitle>Welcome to Avsar</CardTitle>
+              <Button variant="ghost" size="sm" onClick={handleSkip}>
+                Skip
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Step {step} of {totalSteps}</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Step 1: Basic Information */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Let's get to know you</h3>
+                <p className="text-muted-foreground">Tell us a bit about yourself</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    placeholder="Enter your full name"
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    placeholder="Enter your age"
+                    value={formData.age}
+                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="educationLevel">Education Level</Label>
+                  <Select
+                    value={formData.educationLevel}
+                    onValueChange={(value) => setFormData({ ...formData, educationLevel: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your education level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high-school">High School</SelectItem>
+                      <SelectItem value="undergraduate">Undergraduate</SelectItem>
+                      <SelectItem value="graduate">Graduate</SelectItem>
+                      <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="bio">About You (Optional)</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Tell us about yourself, your aspirations..."
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    rows={4}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Profile Picture */}
+          {step === 2 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Add a profile picture</h3>
+                <p className="text-muted-foreground">Help us personalize your experience</p>
+              </div>
+
+              <div className="flex flex-col items-center space-y-4">
+                <Avatar className="h-32 w-32">
+                  <AvatarImage src={formData.profilePicture} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
+                    {formData.fullName.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Picture
+                </Button>
+                <p className="text-sm text-muted-foreground">Or skip this step for now</p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Interests */}
+          {step === 3 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-2">What are your interests?</h3>
+                <p className="text-muted-foreground">Select all that apply</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {interests.map((interest) => (
+                  <Badge
+                    key={interest}
+                    variant={formData.interests.includes(interest) ? "default" : "outline"}
+                    className="cursor-pointer px-4 py-2 text-sm"
+                    onClick={() => toggleInterest(interest)}
+                  >
+                    {interest}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Goals */}
+          {step === 4 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-2">What are your goals?</h3>
+                <p className="text-muted-foreground">Help us tailor recommendations for you</p>
+              </div>
+
+              <div className="space-y-3">
+                {goals.map((goal) => (
+                  <div
+                    key={goal}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      formData.goals.includes(goal)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => toggleGoal(goal)}
+                  >
+                    <p className="font-medium">{goal}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={step === 1}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+
+            <Button onClick={handleNext}>
+              {step === totalSteps ? "Complete" : "Next"}
+              {step < totalSteps && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default Onboarding;
