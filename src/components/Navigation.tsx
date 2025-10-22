@@ -22,17 +22,17 @@ const Navigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-foreground hover:text-primary transition-colors">
-              Home
+            <Link to="/dashboard" className="text-foreground hover:text-primary transition-colors">
+              Dashboard
             </Link>
-            <Link to="/about" className="text-foreground hover:text-primary transition-colors">
-              About
+            <Link to="/careers" className="text-foreground hover:text-primary transition-colors">
+              Careers
             </Link>
-            <Link to="/features" className="text-foreground hover:text-primary transition-colors">
-              Features
+            <Link to="/colleges" className="text-foreground hover:text-primary transition-colors">
+              Colleges
             </Link>
-            <Link to="/contact" className="text-foreground hover:text-primary transition-colors">
-              Contact
+            <Link to="/scholarships" className="text-foreground hover:text-primary transition-colors">
+              Scholarships
             </Link>
           </div>
 
@@ -60,32 +60,32 @@ const Navigation = () => {
         {isOpen && (
           <div className="md:hidden py-4 space-y-4 animate-fade-in">
             <Link
-              to="/"
+              to="/dashboard"
               className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
               onClick={toggleMenu}
             >
-              Home
+              Dashboard
             </Link>
             <Link
-              to="/about"
+              to="/careers"
               className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
               onClick={toggleMenu}
             >
-              About
+              Careers
             </Link>
             <Link
-              to="/features"
+              to="/colleges"
               className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
               onClick={toggleMenu}
             >
-              Features
+              Colleges
             </Link>
             <Link
-              to="/contact"
+              to="/scholarships"
               className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
               onClick={toggleMenu}
             >
-              Contact
+              Scholarships
             </Link>
             <div className="flex flex-col space-y-2 px-4 pt-4 border-t">
               <Button variant="outline" asChild onClick={toggleMenu}>
