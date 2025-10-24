@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,44 @@ import {
   Target,
   ArrowRight,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Heart
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import AnalyticsCard from "@/components/AnalyticsCard";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
-  const [userName] = useState("Student");
+  const { user } = useAuth();
+  const { analytics, loading } = useAnalytics();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    loadProfile();
+  }, [user]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    setProfile(data);
+  };
+
+  const userName = profile?.full_name || user?.email?.split('@')[0] || "Student";
+  const userInitials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('') || userName.charAt(0);
+
+  // Calculate profile completion
+  const profileFields = ['full_name', 'age', 'education_level', 'interests', 'goals'];
+  const completedFields = profileFields.filter(field => profile?.[field]).length;
+  const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
 
   const stats = [
     { label: "Quizzes Taken", value: "0", icon: BookOpen, color: "text-primary" },
@@ -61,9 +92,9 @@ const Dashboard = () => {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src="" />
+              <AvatarImage src={profile?.profile_picture_url || ""} />
               <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                {userName.charAt(0)}
+                {userInitials}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -75,22 +106,34 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                      <p className="text-3xl font-bold">{stat.value}</p>
-                    </div>
-                    <Icon className={`h-8 w-8 ${stat.color}`} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {!loading && (
+            <>
+              <AnalyticsCard
+                title="Quizzes Taken"
+                value={analytics.quizzesTaken}
+                icon={BookOpen}
+                description="Completed assessments"
+              />
+              <AnalyticsCard
+                title="Career Matches"
+                value={analytics.recommendationsReceived}
+                icon={Target}
+                description="AI-generated recommendations"
+              />
+              <AnalyticsCard
+                title="Saved Colleges"
+                value={analytics.collegesSaved}
+                icon={Award}
+                description="In your favorites"
+              />
+              <AnalyticsCard
+                title="Saved Scholarships"
+                value={analytics.scholarshipsSaved}
+                icon={Heart}
+                description="Opportunities tracked"
+              />
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -137,9 +180,9 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-muted-foreground">Complete your profile</span>
-                      <span className="font-medium">20%</span>
+                      <span className="font-medium">{profileCompletion}%</span>
                     </div>
-                    <Progress value={20} className="h-2" />
+                    <Progress value={profileCompletion} className="h-2" />
                   </div>
                   <Button asChild variant="outline" className="w-full">
                     <Link to="/profile">Complete Profile</Link>

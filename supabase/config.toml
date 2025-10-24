@@ -1,1 +1,7 @@
 project_id = "aanuxmipcjiqcmlqfdjk"
+
+[functions.generate-career-recommendations]
+verify_jwt = true
+
+[functions.generate-career-description]
+verify_jwt = true
