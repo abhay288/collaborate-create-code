@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight, Save, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useQuizSession } from "@/hooks/useQuizSession";
+import { useCareerRecommendations } from "@/hooks/useCareerRecommendations";
 
 // Sample quiz questions - will be replaced with real data
 const quizQuestions = [
@@ -235,10 +237,19 @@ const quizQuestions = [
 
 export default function Quiz() {
   const navigate = useNavigate();
+  const { startNewSession, saveResponse, completeSession, currentSession } = useQuizSession();
+  const { generateRecommendations } = useCareerRecommendations();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [savedResponses, setSavedResponses] = useState<Array<{
+    question_id: string;
+    category: string;
+    selected_option: string;
+    isCorrect: boolean;
+  }>>([]);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const progress = ((currentQuestion + 1) / quizQuestions.length) * 100;
 
@@ -253,29 +264,54 @@ export default function Quiz() {
     return () => clearInterval(timer);
   }, [isPaused]);
 
-  // Auto-save to localStorage
+  // Initialize quiz session
   useEffect(() => {
-    localStorage.setItem('quiz-progress', JSON.stringify({
-      currentQuestion,
-      answers,
-      timeElapsed,
-      timestamp: Date.now()
-    }));
-  }, [currentQuestion, answers, timeElapsed]);
-
-  // Load saved progress
-  useEffect(() => {
-    const saved = localStorage.getItem('quiz-progress');
-    if (saved) {
-      const { currentQuestion: savedQ, answers: savedA, timeElapsed: savedT } = JSON.parse(saved);
-      setCurrentQuestion(savedQ);
-      setAnswers(savedA);
-      setTimeElapsed(savedT);
-    }
+    const initSession = async () => {
+      const session = await startNewSession();
+      if (session) {
+        setSessionId(session.id);
+      } else {
+        toast.error('Failed to start quiz. Please try again.');
+        navigate('/dashboard');
+      }
+    };
+    
+    initSession();
   }, []);
 
-  const handleAnswerSelect = (optionIndex: number) => {
-    setAnswers({ ...answers, [quizQuestions[currentQuestion].id]: optionIndex });
+  const handleAnswerSelect = async (optionIndex: number) => {
+    if (!sessionId) return;
+
+    const question = quizQuestions[currentQuestion];
+    const newAnswers = { ...answers, [question.id]: optionIndex };
+    setAnswers(newAnswers);
+
+    // Save response to server immediately
+    try {
+      // In a real implementation, questions would have correct answers
+      // For now, we'll use a simple scoring heuristic
+      const isCorrect = optionIndex === 0 || optionIndex === 1; // Simplified scoring
+      
+      const responseData = await saveResponse(
+        sessionId,
+        question.id.toString(),
+        question.options[optionIndex],
+        question.category,
+        isCorrect
+      );
+
+      if (responseData) {
+        setSavedResponses([...savedResponses, {
+          question_id: question.id.toString(),
+          category: responseData.category,
+          selected_option: question.options[optionIndex],
+          isCorrect: responseData.isCorrect
+        }]);
+      }
+    } catch (error) {
+      console.error('Error saving answer:', error);
+      toast.error('Failed to save answer. Please try again.');
+    }
   };
 
   const handleNext = () => {
@@ -292,21 +328,35 @@ export default function Quiz() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const unanswered = quizQuestions.filter(q => !(q.id in answers));
     if (unanswered.length > 0) {
       toast.error(`Please answer all questions (${unanswered.length} remaining)`);
       return;
     }
 
-    // Save results and navigate
-    localStorage.setItem('quiz-results', JSON.stringify({
-      answers,
-      timeElapsed,
-      completedAt: Date.now()
-    }));
-    localStorage.removeItem('quiz-progress');
-    navigate('/quiz/results');
+    if (!sessionId || savedResponses.length === 0) {
+      toast.error('Session error. Please try again.');
+      return;
+    }
+
+    try {
+      // Calculate score based on saved responses
+      const correctAnswers = savedResponses.filter(r => r.isCorrect).length;
+      const score = Math.round((correctAnswers / savedResponses.length) * 100);
+
+      // Complete the session
+      await completeSession(sessionId, score);
+
+      // Generate AI recommendations
+      await generateRecommendations(sessionId, savedResponses);
+
+      // Navigate to results with session ID
+      navigate(`/quiz/results?session=${sessionId}`);
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
+      toast.error('Failed to submit quiz. Please try again.');
+    }
   };
 
   const handleSaveAndExit = () => {

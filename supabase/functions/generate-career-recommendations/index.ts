@@ -12,8 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { quizSessionId, responses } = await req.json();
-    
+    // Validate authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
@@ -30,6 +29,38 @@ serve(async (req) => {
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
+
+    // Parse and validate input
+    const requestData = await req.json();
+    
+    // Validate quizSessionId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!requestData.quizSessionId || !uuidRegex.test(requestData.quizSessionId)) {
+      throw new Error('Invalid quizSessionId format');
+    }
+    
+    // Validate responses array
+    if (!Array.isArray(requestData.responses)) {
+      throw new Error('responses must be an array');
+    }
+    if (requestData.responses.length === 0 || requestData.responses.length > 100) {
+      throw new Error('responses must contain between 1 and 100 items');
+    }
+    
+    // Validate each response structure
+    for (const response of requestData.responses) {
+      if (!response.category || typeof response.category !== 'string') {
+        throw new Error('Each response must have a valid category');
+      }
+      if (typeof response.isCorrect !== 'boolean') {
+        throw new Error('Each response must have an isCorrect boolean');
+      }
+      if (response.category.length > 100) {
+        throw new Error('Category must be less than 100 characters');
+      }
+    }
+    
+    const { quizSessionId, responses } = requestData;
 
     // Analyze quiz responses to determine category strengths
     const categoryScores = responses.reduce((acc: any, response: any) => {

@@ -1,8 +1,33 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Input validation schema
+const validateInput = (data: any) => {
+  if (!data.careerTitle || typeof data.careerTitle !== 'string') {
+    throw new Error('careerTitle is required and must be a string');
+  }
+  if (data.careerTitle.length < 1 || data.careerTitle.length > 200) {
+    throw new Error('careerTitle must be between 1 and 200 characters');
+  }
+  if (!data.category || typeof data.category !== 'string') {
+    throw new Error('category is required and must be a string');
+  }
+  if (data.category.length < 1 || data.category.length > 100) {
+    throw new Error('category must be between 1 and 100 characters');
+  }
+  
+  // Sanitize inputs to prevent prompt injection
+  const sanitized = {
+    careerTitle: data.careerTitle.trim().replace(/[^\w\s-]/g, ''),
+    category: data.category.trim().replace(/[^\w\s-]/g, '')
+  };
+  
+  return sanitized;
 };
 
 serve(async (req) => {
@@ -11,7 +36,26 @@ serve(async (req) => {
   }
 
   try {
-    const { careerTitle, category } = await req.json();
+    // Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Unauthorized');
+    }
+
+    // Parse and validate input
+    const requestData = await req.json();
+    const { careerTitle, category } = validateInput(requestData);
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
