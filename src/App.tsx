@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Lazy load pages for better performance
@@ -22,6 +23,14 @@ const Careers = lazy(() => import("./pages/Careers"));
 const Colleges = lazy(() => import("./pages/Colleges"));
 const Scholarships = lazy(() => import("./pages/Scholarships"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Admin pages
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const ManageColleges = lazy(() => import("./pages/admin/ManageColleges"));
+const ManageScholarships = lazy(() => import("./pages/admin/ManageScholarships"));
+const ManageCareers = lazy(() => import("./pages/admin/ManageCareers"));
+const ManageUsers = lazy(() => import("./pages/admin/ManageUsers"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -54,6 +63,15 @@ const App = () => (
               <Route path="/careers" element={<ProtectedRoute><Careers /></ProtectedRoute>} />
               <Route path="/colleges" element={<ProtectedRoute><Colleges /></ProtectedRoute>} />
               <Route path="/scholarships" element={<ProtectedRoute><Scholarships /></ProtectedRoute>} />
+              
+              {/* Admin routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin/colleges" element={<AdminRoute><ManageColleges /></AdminRoute>} />
+              <Route path="/admin/scholarships" element={<AdminRoute><ManageScholarships /></AdminRoute>} />
+              <Route path="/admin/careers" element={<AdminRoute><ManageCareers /></AdminRoute>} />
+              <Route path="/admin/users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>

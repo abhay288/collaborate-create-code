@@ -99,11 +99,13 @@ export type Database = {
           created_at: string
           cutoff_scores: Json | null
           description: string | null
+          district: string | null
           fees: number | null
           id: string
           location: string
           name: string
           rating: number | null
+          state: string | null
           updated_at: string
           website: string | null
         }
@@ -112,11 +114,13 @@ export type Database = {
           created_at?: string
           cutoff_scores?: Json | null
           description?: string | null
+          district?: string | null
           fees?: number | null
           id?: string
           location: string
           name: string
           rating?: number | null
+          state?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -125,11 +129,13 @@ export type Database = {
           created_at?: string
           cutoff_scores?: Json | null
           description?: string | null
+          district?: string | null
           fees?: number | null
           id?: string
           location?: string
           name?: string
           rating?: number | null
+          state?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -300,6 +306,7 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["scholarship_type"]
           updated_at: string
+          verified: boolean | null
         }
         Insert: {
           amount?: number | null
@@ -312,6 +319,7 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["scholarship_type"]
           updated_at?: string
+          verified?: boolean | null
         }
         Update: {
           amount?: number | null
@@ -324,6 +332,7 @@ export type Database = {
           title?: string
           type?: Database["public"]["Enums"]["scholarship_type"]
           updated_at?: string
+          verified?: boolean | null
         }
         Relationships: []
       }
