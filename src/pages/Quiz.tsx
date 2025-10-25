@@ -309,7 +309,9 @@ export default function Quiz() {
         }]);
       }
     } catch (error) {
-      console.error('Error saving answer:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error saving answer:', error);
+      }
       toast.error('Failed to save answer. Please try again.');
     }
   };
@@ -354,7 +356,9 @@ export default function Quiz() {
       // Navigate to results with session ID
       navigate(`/quiz/results?session=${sessionId}`);
     } catch (error) {
-      console.error('Error submitting quiz:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error submitting quiz:', error);
+      }
       toast.error('Failed to submit quiz. Please try again.');
     }
   };

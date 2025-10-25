@@ -35,50 +35,49 @@ export const useAnalytics = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get quiz count
-      const { count: quizCount } = await supabase
-        .from('quiz_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('completed', true);
-
-      // Get recommendations count
-      const { count: recommendationsCount } = await supabase
-        .from('career_recommendations')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      // Get careers explored (from activity)
-      const { count: careersCount } = await supabase
-        .from('user_activity')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('activity_type', 'career_viewed');
-
-      // Get saved colleges
-      const { count: collegesCount } = await supabase
-        .from('user_favorites')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('item_type', 'college');
-
-      // Get saved scholarships
-      const { count: scholarshipsCount } = await supabase
-        .from('user_favorites')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('item_type', 'scholarship');
-
-      // Get recent activity (last 7 days)
+      // Optimize: Run all count queries in parallel
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const { data: recentActivity } = await supabase
-        .from('user_activity')
-        .select('activity_type, created_at')
-        .eq('user_id', user.id)
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: false });
+      const [
+        { count: quizCount },
+        { count: recommendationsCount },
+        { count: careersCount },
+        { count: collegesCount },
+        { count: scholarshipsCount },
+        { data: recentActivity }
+      ] = await Promise.all([
+        supabase
+          .from('quiz_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('completed', true),
+        supabase
+          .from('career_recommendations')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id),
+        supabase
+          .from('user_activity')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('activity_type', 'career_viewed'),
+        supabase
+          .from('user_favorites')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('item_type', 'college'),
+        supabase
+          .from('user_favorites')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('item_type', 'scholarship'),
+        supabase
+          .from('user_activity')
+          .select('activity_type, created_at')
+          .eq('user_id', user.id)
+          .gte('created_at', sevenDaysAgo.toISOString())
+          .order('created_at', { ascending: false })
+      ]);
 
       // Group activity by date
       const activityByDate = (recentActivity || []).reduce((acc: any, activity) => {

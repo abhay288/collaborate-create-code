@@ -1,0 +1,19 @@
+{
+  "name": "AVSAR - AI Career Guidance",
+  "short_name": "AVSAR",
+  "description": "AI-Powered Career & Education Guidance Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1E40AF",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": []
+}
