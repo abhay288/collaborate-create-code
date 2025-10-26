@@ -47,9 +47,9 @@ serve(async (req) => {
 
     // Fetch opportunities from multiple sources
     const [scholarships, colleges, jobs] = await Promise.all([
-      fetchScholarships(profile),
+      fetchScholarships(profile, supabase),
       fetchColleges(profile, supabase),
-      fetchJobs(profile)
+      fetchJobs(profile, supabase)
     ]);
 
     // Rank and filter based on profile
@@ -96,108 +96,53 @@ serve(async (req) => {
   }
 });
 
-async function fetchScholarships(profile: AptitudeProfile) {
-  const scholarships = [];
-  
-  // UP Government Scholarships
-  const upScholarships = [
-    {
-      id: 'up-pre-matric-minority',
-      name: 'UP Pre-Matric Scholarship for Minorities',
-      provider: 'Government of Uttar Pradesh',
-      eligibility_summary: 'Class 9-10, Minority community, Uttar Pradesh domicile',
-      amount: '₹10,000 per year',
-      deadline: '2025-12-31T23:59:59Z',
-      apply_url: 'https://scholarship.up.gov.in',
-      official_domain: 'scholarship.up.gov.in',
-      required_documents: ['Income Certificate', 'Caste Certificate', 'Aadhar Card', 'Bank Details', 'School Certificate'],
-      youtube_tutorial: {
-        title: 'UP Scholarship Online Application 2024-25 | Complete Process',
-        channel: 'Sarkari Result',
-        url: 'https://www.youtube.com/results?search_query=UP+Pre+Matric+Scholarship+application+process',
-        publish_date: '2024-01-15'
-      },
-      last_checked: new Date().toISOString(),
-      status: 'open',
-      location_match: profile.preferred_locations.includes('Uttar Pradesh')
+async function fetchScholarships(profile: AptitudeProfile, supabase: any) {
+  // Fetch verified scholarships from database
+  let query = supabase
+    .from('verified_scholarships')
+    .select('*')
+    .eq('status', 'open')
+    .gte('deadline', new Date().toISOString());
+
+  // Filter by academic level
+  if (profile.academic_level) {
+    query = query.contains('target_academic_level', [profile.academic_level]);
+  }
+
+  // Filter by locations (prioritize matching locations)
+  const { data: allScholarships, error } = await query;
+
+  if (error) {
+    console.error('Error fetching scholarships:', error);
+    return [];
+  }
+
+  // Transform and score scholarships
+  return (allScholarships || []).map((scholarship: any) => ({
+    id: scholarship.id,
+    name: scholarship.name,
+    provider: scholarship.provider,
+    eligibility_summary: scholarship.eligibility_summary,
+    amount: scholarship.amount,
+    deadline: scholarship.deadline,
+    apply_url: scholarship.apply_url,
+    official_domain: scholarship.official_domain,
+    required_documents: scholarship.required_documents || [],
+    youtube_tutorial: {
+      title: scholarship.youtube_tutorial_title || 'Application Tutorial',
+      channel: scholarship.youtube_tutorial_channel || 'Official Channel',
+      url: scholarship.youtube_tutorial_url || 'https://www.youtube.com',
+      publish_date: scholarship.youtube_tutorial_publish_date || new Date().toISOString()
     },
-    {
-      id: 'up-post-matric-sc-st',
-      name: 'UP Post-Matric Scholarship for SC/ST',
-      provider: 'Government of Uttar Pradesh',
-      eligibility_summary: 'Class 11 & above, SC/ST category, Uttar Pradesh domicile',
-      amount: '₹15,000 - ₹35,000 per year',
-      deadline: '2025-11-30T23:59:59Z',
-      apply_url: 'https://scholarship.up.gov.in',
-      official_domain: 'scholarship.up.gov.in',
-      required_documents: ['Income Certificate', 'Caste Certificate', 'Aadhar Card', 'Bank Details', 'Admission Receipt'],
-      youtube_tutorial: {
-        title: 'UP Post Matric Scholarship | How to Apply Online',
-        channel: 'Digital Education',
-        url: 'https://www.youtube.com/results?search_query=UP+Post+Matric+Scholarship+SC+ST+application',
-        publish_date: '2024-02-20'
-      },
-      last_checked: new Date().toISOString(),
-      status: 'open',
-      location_match: profile.preferred_locations.includes('Uttar Pradesh')
-    }
-  ];
-
-  // National Scholarships
-  const nationalScholarships = [
-    {
-      id: 'nsp-merit-cum-means',
-      name: 'National Means cum Merit Scholarship (NMMS)',
-      provider: 'Ministry of Education, Government of India',
-      eligibility_summary: 'Class 9-12, Family income < ₹1.5 lakh/year, Minimum 55% in Class 8',
-      amount: '₹12,000 per year',
-      deadline: '2025-10-31T23:59:59Z',
-      apply_url: 'https://scholarships.gov.in',
-      official_domain: 'scholarships.gov.in',
-      required_documents: ['Income Certificate', 'Class 8 Marksheet', 'Aadhar Card', 'Bank Details', 'School Certificate'],
-      youtube_tutorial: {
-        title: 'NSP NMMS Scholarship Application 2024 | Step by Step Guide',
-        channel: 'Scholarship Portal India',
-        url: 'https://www.youtube.com/results?search_query=NMMS+scholarship+NSP+application+process',
-        publish_date: '2024-03-10'
-      },
-      last_checked: new Date().toISOString(),
-      status: 'open',
-      location_match: true
-    },
-    {
-      id: 'buddy4study-engineering',
-      name: 'Engineering Students Scholarship',
-      provider: 'Buddy4Study - Various Providers',
-      eligibility_summary: 'B.Tech/B.E. students, Minimum 60% marks, Family income criteria varies',
-      amount: '₹10,000 - ₹50,000',
-      deadline: '2025-09-30T23:59:59Z',
-      apply_url: 'https://www.buddy4study.com/page/scholarships-for-engineering-students',
-      official_domain: 'buddy4study.com',
-      required_documents: ['Academic Records', 'Income Certificate', 'Aadhar Card', 'College ID'],
-      youtube_tutorial: {
-        title: 'Buddy4Study Scholarship Application Process | Complete Guide',
-        channel: 'Student Guide',
-        url: 'https://www.youtube.com/results?search_query=Buddy4Study+scholarship+application+process',
-        publish_date: '2024-01-25'
-      },
-      last_checked: new Date().toISOString(),
-      status: 'open',
-      location_match: true
-    }
-  ];
-
-  scholarships.push(...upScholarships, ...nationalScholarships);
-
-  // Filter based on academic level and location
-  return scholarships.filter(s => {
-    if (profile.academic_level === 'UG') {
-      return s.eligibility_summary.toLowerCase().includes('class') || 
-             s.eligibility_summary.toLowerCase().includes('b.tech') ||
-             s.eligibility_summary.toLowerCase().includes('b.e.');
-    }
-    return true;
-  });
+    last_checked: scholarship.last_checked,
+    status: scholarship.status,
+    location_match: scholarship.target_locations?.some((loc: string) => 
+      profile.preferred_locations.some(prefLoc => 
+        prefLoc.toLowerCase().includes(loc.toLowerCase()) || 
+        loc.toLowerCase() === 'national'
+      )
+    ) || false
+  }));
 }
 
 async function fetchColleges(profile: AptitudeProfile, supabase: any) {
@@ -230,67 +175,44 @@ async function fetchColleges(profile: AptitudeProfile, supabase: any) {
   }));
 }
 
-async function fetchJobs(profile: AptitudeProfile) {
-  const jobs = [];
+async function fetchJobs(profile: AptitudeProfile, supabase: any) {
   const currentDate = new Date();
   const sevenDaysAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Sample jobs based on aptitude profile
-  const techJobs = [
-    {
-      id: 'job-tech-1',
-      role: 'Software Developer Intern',
-      company: 'Tech Solutions India',
-      location: 'Noida, Uttar Pradesh',
-      salary_range: '₹15,000 - ₹25,000 per month',
-      apply_url: 'https://www.naukri.com',
-      posting_date: new Date(currentDate.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      source_site: 'Naukri.com',
-      last_checked: new Date().toISOString(),
-      required_skills: ['Programming', 'Problem Solving', 'Logical Thinking'],
-      match_score: 0
-    },
-    {
-      id: 'job-tech-2',
-      role: 'Junior Data Analyst',
-      company: 'Analytics Corp',
-      location: 'Lucknow, Uttar Pradesh',
-      salary_range: '₹20,000 - ₹30,000 per month',
-      apply_url: 'https://www.linkedin.com/jobs',
-      posting_date: new Date(currentDate.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      source_site: 'LinkedIn',
-      last_checked: new Date().toISOString(),
-      required_skills: ['Data Analysis', 'Quantitative Skills', 'Excel'],
-      match_score: 0
-    }
-  ];
+  // Fetch active jobs from last 7 days
+  let query = supabase
+    .from('verified_jobs')
+    .select('*')
+    .eq('is_active', true)
+    .gte('posting_date', sevenDaysAgo.toISOString())
+    .order('posting_date', { ascending: false });
 
-  const businessJobs = [
-    {
-      id: 'job-business-1',
-      role: 'Business Development Intern',
-      company: 'Growth Partners',
-      location: 'Kanpur, Uttar Pradesh',
-      salary_range: '₹12,000 - ₹20,000 per month',
-      apply_url: 'https://www.indeed.com',
-      posting_date: new Date(currentDate.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      source_site: 'Indeed',
-      last_checked: new Date().toISOString(),
-      required_skills: ['Communication', 'Interpersonal Skills', 'Sales'],
-      match_score: 0
-    }
-  ];
-
-  // Add jobs based on profile
-  if (profile.skills.technical >= 60 || profile.skills.quantitative >= 60) {
-    jobs.push(...techJobs);
-  }
-  
-  if (profile.skills.interpersonal >= 60 || profile.skills.verbal >= 60) {
-    jobs.push(...businessJobs);
+  // Filter by education level if specified
+  if (profile.academic_level) {
+    query = query.contains('required_education', [profile.academic_level]);
   }
 
-  return jobs.filter(job => new Date(job.posting_date) >= sevenDaysAgo);
+  const { data: jobs, error } = await query;
+
+  if (error) {
+    console.error('Error fetching jobs:', error);
+    return [];
+  }
+
+  // Filter by location preference
+  return (jobs || []).map((job: any) => ({
+    id: job.id,
+    role: job.role,
+    company: job.company,
+    location: job.location,
+    salary_range: job.salary_range || 'Competitive',
+    apply_url: job.apply_url,
+    posting_date: job.posting_date,
+    source_site: job.source_site,
+    last_checked: job.last_checked,
+    required_skills: job.required_skills || [],
+    match_score: 0
+  }));
 }
 
 function rankColleges(colleges: any[], profile: AptitudeProfile) {

@@ -79,6 +79,22 @@ const AdminDashboard = () => {
       link: '/admin/users',
       stat: `${stats.totalUsers} Users`,
       color: 'text-orange-600'
+    },
+    {
+      title: 'Verified Scholarships',
+      description: 'Real scholarships from NSP, Buddy4Study, UP Portal',
+      icon: Shield,
+      link: '/admin/verified-scholarships',
+      stat: 'Trusted Sources',
+      color: 'text-emerald-600'
+    },
+    {
+      title: 'Verified Jobs',
+      description: 'Real job postings from Naukri, LinkedIn, Indeed',
+      icon: TrendingUp,
+      link: '/admin/verified-jobs',
+      stat: 'Live Postings',
+      color: 'text-rose-600'
     }
   ];
 
@@ -153,7 +169,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Management Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {managementCards.map((card) => (
             <Card key={card.link} className="hover:shadow-lg transition-shadow">
               <CardHeader>

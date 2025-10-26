@@ -421,6 +421,156 @@ export type Database = {
         }
         Relationships: []
       }
+      verified_jobs: {
+        Row: {
+          apply_url: string
+          company: string
+          created_at: string
+          experience_required: string | null
+          id: string
+          is_active: boolean | null
+          job_type: string | null
+          last_checked: string | null
+          location: string
+          posting_date: string
+          required_education: string[] | null
+          required_skills: string[] | null
+          role: string
+          salary_range: string | null
+          source_site: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          apply_url: string
+          company: string
+          created_at?: string
+          experience_required?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_type?: string | null
+          last_checked?: string | null
+          location: string
+          posting_date: string
+          required_education?: string[] | null
+          required_skills?: string[] | null
+          role: string
+          salary_range?: string | null
+          source_site: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          apply_url?: string
+          company?: string
+          created_at?: string
+          experience_required?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_type?: string | null
+          last_checked?: string | null
+          location?: string
+          posting_date?: string
+          required_education?: string[] | null
+          required_skills?: string[] | null
+          role?: string
+          salary_range?: string | null
+          source_site?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
+      verified_scholarships: {
+        Row: {
+          amount: string
+          apply_url: string
+          category_criteria: string[] | null
+          created_at: string
+          deadline: string | null
+          eligibility_summary: string
+          id: string
+          income_criteria: string | null
+          last_checked: string | null
+          minimum_percentage: number | null
+          name: string
+          official_domain: string
+          provider: string
+          required_documents: string[]
+          source: string
+          source_url: string
+          status: string
+          target_academic_level: string[] | null
+          target_locations: string[] | null
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          youtube_tutorial_channel: string | null
+          youtube_tutorial_publish_date: string | null
+          youtube_tutorial_title: string | null
+          youtube_tutorial_url: string | null
+        }
+        Insert: {
+          amount: string
+          apply_url: string
+          category_criteria?: string[] | null
+          created_at?: string
+          deadline?: string | null
+          eligibility_summary: string
+          id?: string
+          income_criteria?: string | null
+          last_checked?: string | null
+          minimum_percentage?: number | null
+          name: string
+          official_domain: string
+          provider: string
+          required_documents?: string[]
+          source: string
+          source_url: string
+          status?: string
+          target_academic_level?: string[] | null
+          target_locations?: string[] | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          youtube_tutorial_channel?: string | null
+          youtube_tutorial_publish_date?: string | null
+          youtube_tutorial_title?: string | null
+          youtube_tutorial_url?: string | null
+        }
+        Update: {
+          amount?: string
+          apply_url?: string
+          category_criteria?: string[] | null
+          created_at?: string
+          deadline?: string | null
+          eligibility_summary?: string
+          id?: string
+          income_criteria?: string | null
+          last_checked?: string | null
+          minimum_percentage?: number | null
+          name?: string
+          official_domain?: string
+          provider?: string
+          required_documents?: string[]
+          source?: string
+          source_url?: string
+          status?: string
+          target_academic_level?: string[] | null
+          target_locations?: string[] | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          youtube_tutorial_channel?: string | null
+          youtube_tutorial_publish_date?: string | null
+          youtube_tutorial_title?: string | null
+          youtube_tutorial_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

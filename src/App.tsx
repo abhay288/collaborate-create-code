@@ -31,6 +31,8 @@ const ManageColleges = lazy(() => import("./pages/admin/ManageColleges"));
 const ManageScholarships = lazy(() => import("./pages/admin/ManageScholarships"));
 const ManageCareers = lazy(() => import("./pages/admin/ManageCareers"));
 const ManageUsers = lazy(() => import("./pages/admin/ManageUsers"));
+const ManageVerifiedScholarships = lazy(() => import("./pages/admin/ManageVerifiedScholarships"));
+const ManageVerifiedJobs = lazy(() => import("./pages/admin/ManageVerifiedJobs"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -71,6 +73,8 @@ const App = () => (
               <Route path="/admin/scholarships" element={<AdminRoute><ManageScholarships /></AdminRoute>} />
               <Route path="/admin/careers" element={<AdminRoute><ManageCareers /></AdminRoute>} />
               <Route path="/admin/users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
+              <Route path="/admin/verified-scholarships" element={<AdminRoute><ManageVerifiedScholarships /></AdminRoute>} />
+              <Route path="/admin/verified-jobs" element={<AdminRoute><ManageVerifiedJobs /></AdminRoute>} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
