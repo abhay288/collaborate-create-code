@@ -79,6 +79,11 @@ const Footer = () => {
                   Terms of Service
                 </Link>
               </li>
+              <li>
+                <Link to="/admin/login" className="text-muted-foreground hover:text-primary transition-colors">
+                  Admin Login
+                </Link>
+              </li>
             </ul>
           </div>
 
