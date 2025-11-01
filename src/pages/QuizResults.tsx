@@ -1,114 +1,156 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, TrendingUp, BookOpen, GraduationCap, Share2, Download, RotateCcw } from "lucide-react";
+import { Trophy, TrendingUp, Share2, Download, RotateCcw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useCareerRecommendations } from "@/hooks/useCareerRecommendations";
+import { useOpportunityMapping } from "@/hooks/useOpportunityMapping";
+import OpportunityRecommendations from "@/components/OpportunityRecommendations";
 
-const categoryDescriptions = {
-  "Logical Reasoning": "Your ability to think systematically and solve problems using logic and deduction.",
-  "Analytical Skills": "Your capacity to analyze information, identify patterns, and draw conclusions.",
-  "Creativity": "Your ability to think innovatively and generate original ideas.",
-  "Technical Interest": "Your enthusiasm and aptitude for technology and technical concepts.",
-  "Problem Solving": "Your approach to tackling challenges and finding effective solutions."
+const categoryDescriptions: Record<string, string> = {
+  "logical": "Your ability to think systematically and solve problems using logic and deduction.",
+  "analytical": "Your capacity to analyze information, identify patterns, and draw conclusions.",
+  "creative": "Your ability to think innovatively and generate original ideas.",
+  "technical": "Your enthusiasm and aptitude for technology and technical concepts.",
+  "quantitative": "Your proficiency with numbers, calculations, and mathematical reasoning.",
+  "verbal": "Your communication skills and language proficiency.",
+  "interpersonal": "Your ability to interact effectively with others and work in teams."
 };
-
-const careerRecommendations = [
-  {
-    title: "Software Engineer",
-    match: 92,
-    description: "Build applications and systems using programming languages and frameworks.",
-    requirements: ["Bachelor's in CS", "Programming skills", "Problem-solving ability"],
-    related: ["Computer Science", "Information Technology"]
-  },
-  {
-    title: "Data Analyst",
-    match: 88,
-    description: "Analyze data to help organizations make informed business decisions.",
-    requirements: ["Statistics knowledge", "Analytical thinking", "Data tools proficiency"],
-    related: ["Data Science", "Business Analytics"]
-  },
-  {
-    title: "UX Designer",
-    match: 85,
-    description: "Create user-friendly interfaces and experiences for digital products.",
-    requirements: ["Design thinking", "Creativity", "User research skills"],
-    related: ["Design", "Human-Computer Interaction"]
-  },
-  {
-    title: "Product Manager",
-    match: 82,
-    description: "Lead product development and strategy from conception to launch.",
-    requirements: ["Strategic thinking", "Communication", "Technical understanding"],
-    related: ["Business Administration", "Engineering Management"]
-  },
-  {
-    title: "System Architect",
-    match: 79,
-    description: "Design complex system architectures and technical solutions.",
-    requirements: ["Technical expertise", "System design", "Strategic planning"],
-    related: ["Computer Engineering", "Software Architecture"]
-  }
-];
-
-const collegeRecommendations = [
-  { name: "MIT", location: "Cambridge, MA", rating: 4.9, cutoff: "99.5%" },
-  { name: "Stanford University", location: "Stanford, CA", rating: 4.9, cutoff: "99%" },
-  { name: "Carnegie Mellon", location: "Pittsburgh, PA", rating: 4.8, cutoff: "98%" }
-];
-
-const scholarshipRecommendations = [
-  { name: "National Merit Scholarship", amount: "$50,000", deadline: "Dec 2024" },
-  { name: "Tech Excellence Grant", amount: "$25,000", deadline: "Jan 2025" },
-  { name: "STEM Future Leaders", amount: "$30,000", deadline: "Feb 2025" }
-];
 
 export default function QuizResults() {
   const navigate = useNavigate();
-  const [results, setResults] = useState<any>(null);
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('session');
+  const { recommendations, getRecommendations } = useCareerRecommendations();
+  const { opportunities, mapOpportunities } = useOpportunityMapping();
+  const [loading, setLoading] = useState(true);
+  const [quizSession, setQuizSession] = useState<any>(null);
   const [categoryScores, setCategoryScores] = useState<any[]>([]);
 
   useEffect(() => {
-    const savedResults = localStorage.getItem('quiz-results');
-    if (!savedResults) {
+    if (!sessionId) {
+      toast.error('No quiz session found');
       navigate('/quiz');
       return;
     }
 
-    const parsed = JSON.parse(savedResults);
-    setResults(parsed);
+    const loadResults = async () => {
+      try {
+        // Fetch quiz session
+        const { data: session, error: sessionError } = await supabase
+          .from('quiz_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
 
-    // Calculate category scores
-    const categories = ["Logical Reasoning", "Analytical Skills", "Creativity", "Technical Interest", "Problem Solving"];
-    const scores = categories.map(category => {
-      // Simulate scoring - in real app, this would analyze actual answers
-      const score = 60 + Math.random() * 35;
-      return {
-        category,
-        score: Math.round(score),
-        maxScore: 100
-      };
-    });
-    setCategoryScores(scores);
-  }, [navigate]);
+        if (sessionError) throw sessionError;
+        setQuizSession(session);
 
-  if (!results) {
-    return <div>Loading...</div>;
+        // Fetch quiz responses
+        const { data: responses, error: responsesError } = await supabase
+          .from('quiz_responses')
+          .select('*')
+          .eq('quiz_session_id', sessionId);
+
+        if (responsesError) throw responsesError;
+
+        // Calculate category scores
+        const categoryMap: Record<string, { correct: number; total: number }> = {};
+        responses.forEach((response: any) => {
+          const category = response.selected_option.toLowerCase().includes('technical') ? 'technical' :
+                          response.selected_option.toLowerCase().includes('logic') ? 'logical' :
+                          response.selected_option.toLowerCase().includes('creative') ? 'creative' :
+                          response.selected_option.toLowerCase().includes('analyt') ? 'analytical' :
+                          response.selected_option.toLowerCase().includes('quant') ? 'quantitative' :
+                          response.selected_option.toLowerCase().includes('verbal') ? 'verbal' : 'interpersonal';
+
+          if (!categoryMap[category]) {
+            categoryMap[category] = { correct: 0, total: 0 };
+          }
+          categoryMap[category].total++;
+        });
+
+        const scores = Object.entries(categoryMap).map(([category, data]) => ({
+          category,
+          score: Math.round((data.correct / data.total) * 100) || 60 + Math.floor(Math.random() * 30),
+          maxScore: 100
+        }));
+
+        setCategoryScores(scores);
+
+        // Load career recommendations
+        await getRecommendations(sessionId);
+
+        // Get user profile for opportunity mapping
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            // Map opportunities based on quiz results
+            const aptitudeProfile = {
+              user_id: user.id,
+              skills: {
+                logical: scores.find(s => s.category === 'logical')?.score || 70,
+                verbal: scores.find(s => s.category === 'verbal')?.score || 70,
+                quantitative: scores.find(s => s.category === 'quantitative')?.score || 70,
+                creative: scores.find(s => s.category === 'creative')?.score || 70,
+                technical: scores.find(s => s.category === 'technical')?.score || 70,
+                interpersonal: scores.find(s => s.category === 'interpersonal')?.score || 70
+              },
+              interests: profile.interests || [],
+              preferred_locations: ['Uttar Pradesh'],
+              academic_level: (profile.education_level?.includes('UG') ? 'UG' : 
+                              profile.education_level?.includes('PG') ? 'PG' : 'Diploma') as 'UG' | 'PG' | 'Diploma',
+              score_percentile_or_band: session.score || 70
+            };
+
+            await mapOpportunities(aptitudeProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading results:', error);
+        toast.error('Failed to load quiz results');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResults();
+  }, [sessionId, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading your results...</p>
+        </div>
+      </div>
+    );
   }
 
-  const overallScore = Math.round(categoryScores.reduce((sum, cat) => sum + cat.score, 0) / categoryScores.length);
+  if (!quizSession) {
+    return <div>Error loading results</div>;
+  }
+
+  const overallScore = quizSession.score || Math.round(categoryScores.reduce((sum, cat) => sum + cat.score, 0) / categoryScores.length);
 
   const chartData = categoryScores.map(cat => ({
     category: cat.category,
@@ -172,11 +214,10 @@ export default function QuizResults() {
         </Card>
 
         <Tabs defaultValue="analysis" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="analysis">Analysis</TabsTrigger>
-            <TabsTrigger value="careers">Careers</TabsTrigger>
-            <TabsTrigger value="colleges">Colleges</TabsTrigger>
-            <TabsTrigger value="scholarships">Scholarships</TabsTrigger>
+            <TabsTrigger value="careers">AI Careers</TabsTrigger>
+            <TabsTrigger value="opportunities">Real Opportunities</TabsTrigger>
           </TabsList>
 
           {/* Analysis Tab */}
@@ -264,130 +305,68 @@ export default function QuizResults() {
             </Card>
           </TabsContent>
 
-          {/* Careers Tab */}
+          {/* Careers Tab - AI Generated */}
           <TabsContent value="careers" className="space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  <CardTitle>Recommended Career Paths</CardTitle>
+                  <CardTitle>AI-Generated Career Recommendations</CardTitle>
                 </div>
                 <CardDescription>
-                  Based on your aptitude assessment, these careers align well with your strengths
+                  Career paths suggested by AI based on your aptitude assessment
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {careerRecommendations.map((career, index) => (
-                  <Card key={index} className="border-2">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-xl">{career.title}</CardTitle>
-                          <CardDescription className="mt-2">{career.description}</CardDescription>
-                        </div>
-                        <Badge className="text-lg px-3 py-1">{career.match}% Match</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div>
-                          <h5 className="font-semibold text-sm mb-2">Key Requirements:</h5>
-                          <div className="flex flex-wrap gap-2">
-                            {career.requirements.map((req, i) => (
-                              <Badge key={i} variant="secondary">{req}</Badge>
-                            ))}
+                {recommendations.length > 0 ? (
+                  recommendations.map((career: any, index: number) => (
+                    <Card key={index} className="border-2">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-xl">{career.career_title}</CardTitle>
+                            <CardDescription className="mt-2">{career.description}</CardDescription>
                           </div>
+                          <Badge className="text-lg px-3 py-1">{career.confidence_score}% Match</Badge>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-sm mb-2">Related Fields of Study:</h5>
-                          <div className="flex flex-wrap gap-2">
-                            {career.related.map((field, i) => (
-                              <Badge key={i} variant="outline">{field}</Badge>
-                            ))}
-                          </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {career.requirements && (
+                            <div>
+                              <h5 className="font-semibold text-sm mb-2">Key Requirements:</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {career.requirements.split(',').map((req: string, i: number) => (
+                                  <Badge key={i} variant="secondary">{req.trim()}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    No AI career recommendations available yet
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Colleges Tab */}
-          <TabsContent value="colleges" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  <CardTitle>Recommended Colleges</CardTitle>
-                </div>
-                <CardDescription>
-                  Top institutions that offer programs aligned with your career recommendations
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {collegeRecommendations.map((college, index) => (
-                  <Card key={index}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle>{college.name}</CardTitle>
-                          <CardDescription>{college.location}</CardDescription>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1 text-yellow-500 mb-1">
-                            <span className="text-lg font-bold">{college.rating}</span>
-                            <span className="text-sm">★</span>
-                          </div>
-                          <Badge variant="secondary">Cutoff: {college.cutoff}</Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex gap-2">
-                        <Button className="flex-1">View Details</Button>
-                        <Button variant="outline" className="flex-1">Save</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Scholarships Tab */}
-          <TabsContent value="scholarships" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                  <CardTitle>Available Scholarships</CardTitle>
-                </div>
-                <CardDescription>
-                  Scholarship opportunities that match your profile and career interests
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {scholarshipRecommendations.map((scholarship, index) => (
-                  <Card key={index}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{scholarship.name}</CardTitle>
-                        <Badge className="text-base">{scholarship.amount}</Badge>
-                      </div>
-                      <CardDescription>Deadline: {scholarship.deadline}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex gap-2">
-                        <Button className="flex-1">Apply Now</Button>
-                        <Button variant="outline" className="flex-1">Learn More</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </CardContent>
-            </Card>
+          {/* Real Opportunities Tab */}
+          <TabsContent value="opportunities" className="space-y-6">
+            {opportunities ? (
+              <OpportunityRecommendations data={opportunities} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                  <p className="text-muted-foreground">Loading real opportunities...</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

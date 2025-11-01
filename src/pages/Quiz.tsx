@@ -6,241 +6,25 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Save, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuizSession } from "@/hooks/useQuizSession";
 import { useCareerRecommendations } from "@/hooks/useCareerRecommendations";
+import { supabase } from "@/integrations/supabase/client";
 
-// Sample quiz questions - will be replaced with real data
-const quizQuestions = [
-  {
-    id: 1,
-    category: "Logical Reasoning",
-    question: "If all roses are flowers and some flowers fade quickly, which statement must be true?",
-    options: [
-      "All roses fade quickly",
-      "Some roses may fade quickly",
-      "No roses fade quickly",
-      "All flowers are roses"
-    ]
-  },
-  {
-    id: 2,
-    category: "Analytical Skills",
-    question: "A train travels 120 km in 2 hours. At the same speed, how long will it take to travel 300 km?",
-    options: [
-      "4 hours",
-      "5 hours",
-      "6 hours",
-      "7 hours"
-    ]
-  },
-  {
-    id: 3,
-    category: "Creativity",
-    question: "How would you use a brick in five different ways?",
-    options: [
-      "I can think of 1-2 ways",
-      "I can think of 3-4 ways",
-      "I can think of 5-7 ways",
-      "I can think of 8+ ways"
-    ]
-  },
-  {
-    id: 4,
-    category: "Technical Interest",
-    question: "Which activity sounds most interesting to you?",
-    options: [
-      "Building and fixing things",
-      "Analyzing data and patterns",
-      "Creating art or content",
-      "Helping and teaching others"
-    ]
-  },
-  {
-    id: 5,
-    category: "Problem Solving",
-    question: "When faced with a complex problem, you prefer to:",
-    options: [
-      "Break it into smaller parts",
-      "Look for similar solved problems",
-      "Brainstorm creative solutions",
-      "Consult with experts"
-    ]
-  },
-  {
-    id: 6,
-    category: "Logical Reasoning",
-    question: "What comes next in the sequence: 2, 6, 12, 20, 30, ?",
-    options: [
-      "40",
-      "42",
-      "44",
-      "46"
-    ]
-  },
-  {
-    id: 7,
-    category: "Analytical Skills",
-    question: "You have data showing sales decreased. Your first step is to:",
-    options: [
-      "Immediately propose solutions",
-      "Analyze trends and patterns",
-      "Compare with competitors",
-      "Survey customers"
-    ]
-  },
-  {
-    id: 8,
-    category: "Creativity",
-    question: "When working on a project, you prefer to:",
-    options: [
-      "Follow proven methods",
-      "Mix traditional and new approaches",
-      "Experiment with novel ideas",
-      "Collaborate and innovate together"
-    ]
-  },
-  {
-    id: 9,
-    category: "Technical Interest",
-    question: "Learning new software/technology is:",
-    options: [
-      "Very exciting",
-      "Somewhat interesting",
-      "Okay if necessary",
-      "Not my preference"
-    ]
-  },
-  {
-    id: 10,
-    category: "Problem Solving",
-    question: "A project has an unexpected obstacle. You:",
-    options: [
-      "Quickly pivot to plan B",
-      "Analyze why it happened",
-      "Think outside the box",
-      "Get team input"
-    ]
-  },
-  {
-    id: 11,
-    category: "Logical Reasoning",
-    question: "If some cats are mammals and all mammals are animals, then:",
-    options: [
-      "All animals are cats",
-      "Some cats are animals",
-      "All cats are animals",
-      "No cats are animals"
-    ]
-  },
-  {
-    id: 12,
-    category: "Analytical Skills",
-    question: "You're most comfortable with:",
-    options: [
-      "Numbers and statistics",
-      "Written analysis",
-      "Visual data representation",
-      "Verbal discussion"
-    ]
-  },
-  {
-    id: 13,
-    category: "Creativity",
-    question: "In your free time, you enjoy:",
-    options: [
-      "Structured activities",
-      "A mix of planned and spontaneous",
-      "Creative hobbies",
-      "Social activities"
-    ]
-  },
-  {
-    id: 14,
-    category: "Technical Interest",
-    question: "Understanding how things work internally is:",
-    options: [
-      "Fascinating",
-      "Interesting",
-      "Not important",
-      "Overwhelming"
-    ]
-  },
-  {
-    id: 15,
-    category: "Problem Solving",
-    question: "Your problem-solving strength is:",
-    options: [
-      "Systematic approach",
-      "Research and analysis",
-      "Creative thinking",
-      "Collaboration"
-    ]
-  },
-  {
-    id: 16,
-    category: "Logical Reasoning",
-    question: "Which shape completes the pattern: Circle, Square, Triangle, Circle, Square, ?",
-    options: [
-      "Circle",
-      "Square",
-      "Triangle",
-      "Rectangle"
-    ]
-  },
-  {
-    id: 17,
-    category: "Analytical Skills",
-    question: "When reading an article, you focus on:",
-    options: [
-      "Main arguments",
-      "Data and evidence",
-      "Writing style",
-      "Practical applications"
-    ]
-  },
-  {
-    id: 18,
-    category: "Creativity",
-    question: "You approach brainstorming by:",
-    options: [
-      "Building on existing ideas",
-      "Analyzing constraints first",
-      "Free-flowing ideation",
-      "Group collaboration"
-    ]
-  },
-  {
-    id: 19,
-    category: "Technical Interest",
-    question: "Working with computers and technology:",
-    options: [
-      "Is my passion",
-      "Is useful and interesting",
-      "Is just a tool",
-      "Is challenging for me"
-    ]
-  },
-  {
-    id: 20,
-    category: "Problem Solving",
-    question: "After solving a problem, you:",
-    options: [
-      "Document the solution",
-      "Analyze what worked",
-      "Move to the next challenge",
-      "Share with others"
-    ]
-  }
-];
+interface QuizQuestion {
+  id: string;
+  question_text: string;
+  category: string;
+  options: any;
+}
 
 export default function Quiz() {
   const navigate = useNavigate();
   const { startNewSession, saveResponse, completeSession, currentSession } = useQuizSession();
   const { generateRecommendations } = useCareerRecommendations();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [savedResponses, setSavedResponses] = useState<Array<{
     question_id: string;
     category: string;
@@ -250,8 +34,10 @@ export default function Quiz() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
 
-  const progress = ((currentQuestion + 1) / quizQuestions.length) * 100;
+  const progress = quizQuestions.length > 0 ? ((currentQuestion + 1) / quizQuestions.length) * 100 : 0;
 
   // Timer
   useEffect(() => {
@@ -264,8 +50,40 @@ export default function Quiz() {
     return () => clearInterval(timer);
   }, [isPaused]);
 
+  // Load quiz questions from database
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('quiz_questions')
+          .select('*')
+          .order('created_at');
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          toast.error('No quiz questions available. Please contact support.');
+          navigate('/dashboard');
+          return;
+        }
+
+        setQuizQuestions(data);
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        toast.error('Failed to load quiz questions');
+        navigate('/dashboard');
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+
+    loadQuestions();
+  }, [navigate]);
+
   // Initialize quiz session
   useEffect(() => {
+    if (quizQuestions.length === 0) return;
+
     const initSession = async () => {
       const session = await startNewSession();
       if (session) {
@@ -277,41 +95,58 @@ export default function Quiz() {
     };
     
     initSession();
-  }, []);
+  }, [quizQuestions]);
 
   const handleAnswerSelect = async (optionIndex: number) => {
     if (!sessionId) return;
 
     const question = quizQuestions[currentQuestion];
+    const options = Array.isArray(question.options) ? question.options : question.options?.options || [];
     const newAnswers = { ...answers, [question.id]: optionIndex };
     setAnswers(newAnswers);
 
     // Save response to server immediately
     try {
-      // In a real implementation, questions would have correct answers
-      // For now, we'll use a simple scoring heuristic
-      const isCorrect = optionIndex === 0 || optionIndex === 1; // Simplified scoring
+      const selectedOptionText = typeof options[optionIndex] === 'string' 
+        ? options[optionIndex] 
+        : options[optionIndex]?.text || `Option ${optionIndex + 1}`;
+
+      // Check if option has isCorrect property
+      const isCorrect = typeof options[optionIndex] === 'object' 
+        ? options[optionIndex]?.isCorrect || false
+        : false;
       
       const responseData = await saveResponse(
         sessionId,
-        question.id.toString(),
-        question.options[optionIndex],
+        question.id,
+        selectedOptionText,
         question.category,
         isCorrect
       );
 
       if (responseData) {
-        setSavedResponses([...savedResponses, {
-          question_id: question.id.toString(),
-          category: responseData.category,
-          selected_option: question.options[optionIndex],
-          isCorrect: responseData.isCorrect
-        }]);
+        const existingIndex = savedResponses.findIndex(r => r.question_id === question.id);
+        if (existingIndex >= 0) {
+          const updated = [...savedResponses];
+          updated[existingIndex] = {
+            question_id: question.id,
+            category: responseData.category,
+            selected_option: selectedOptionText,
+            isCorrect: responseData.isCorrect
+          };
+          setSavedResponses(updated);
+        } else {
+          setSavedResponses([...savedResponses, {
+            question_id: question.id,
+            category: responseData.category,
+            selected_option: selectedOptionText,
+            isCorrect: responseData.isCorrect
+          }]);
+        }
+        toast.success('Answer saved', { duration: 1000 });
       }
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error saving answer:', error);
-      }
+      console.error('Error saving answer:', error);
       toast.error('Failed to save answer. Please try again.');
     }
   };
@@ -338,7 +173,7 @@ export default function Quiz() {
     }
 
     if (!sessionId || savedResponses.length === 0) {
-      toast.error('Session error. Please try again.');
+      toast.error('No answers saved. Please answer the questions.');
       return;
     }
 
@@ -353,12 +188,12 @@ export default function Quiz() {
       // Generate AI recommendations
       await generateRecommendations(sessionId, savedResponses);
 
+      toast.success('Quiz submitted successfully!');
+
       // Navigate to results with session ID
       navigate(`/quiz/results?session=${sessionId}`);
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error submitting quiz:', error);
-      }
+      console.error('Error submitting quiz:', error);
       toast.error('Failed to submit quiz. Please try again.');
     }
   };
@@ -374,8 +209,22 @@ export default function Quiz() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  if (loadingQuestions || quizQuestions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading quiz questions...</p>
+        </div>
+      </div>
+    );
+  }
+
   const currentQuestionData = quizQuestions[currentQuestion];
-  const selectedAnswer = answers[currentQuestionData.id];
+  const selectedAnswer = answers[currentQuestionData?.id];
+  const options = Array.isArray(currentQuestionData?.options) 
+    ? currentQuestionData.options 
+    : currentQuestionData?.options?.options || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted py-8 px-4">
@@ -433,7 +282,7 @@ export default function Quiz() {
                 {Object.keys(answers).length}/{quizQuestions.length} answered
               </span>
             </div>
-            <CardTitle className="text-xl">{currentQuestionData.question}</CardTitle>
+            <CardTitle className="text-xl">{currentQuestionData.question_text}</CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup
@@ -441,20 +290,23 @@ export default function Quiz() {
               onValueChange={(value) => handleAnswerSelect(parseInt(value))}
             >
               <div className="space-y-3">
-                {currentQuestionData.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer"
-                  >
-                    <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                    <Label
-                      htmlFor={`option-${index}`}
-                      className="flex-1 cursor-pointer font-normal"
+                {options.map((option: any, index: number) => {
+                  const optionText = typeof option === 'string' ? option : option?.text || `Option ${index + 1}`;
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer"
                     >
-                      {option}
-                    </Label>
-                  </div>
-                ))}
+                      <RadioGroupItem value={index.toString()} id={`option-${index}`} />
+                      <Label
+                        htmlFor={`option-${index}`}
+                        className="flex-1 cursor-pointer font-normal"
+                      >
+                        {optionText}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
             </RadioGroup>
           </CardContent>
