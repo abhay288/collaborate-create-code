@@ -69,7 +69,11 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          industry: string | null
+          job_type: string | null
           requirements: string | null
+          salary_range: string | null
+          skills_required: string[] | null
           title: string
           updated_at: string
         }
@@ -78,7 +82,11 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          industry?: string | null
+          job_type?: string | null
           requirements?: string | null
+          salary_range?: string | null
+          skills_required?: string[] | null
           title: string
           updated_at?: string
         }
@@ -87,7 +95,11 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          industry?: string | null
+          job_type?: string | null
           requirements?: string | null
+          salary_range?: string | null
+          skills_required?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -95,6 +107,8 @@ export type Database = {
       }
       colleges: {
         Row: {
+          admission_link: string | null
+          contact_info: string | null
           courses_offered: string[] | null
           created_at: string
           cutoff_scores: Json | null
@@ -110,6 +124,8 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          admission_link?: string | null
+          contact_info?: string | null
           courses_offered?: string[] | null
           created_at?: string
           cutoff_scores?: Json | null
@@ -125,6 +141,8 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          admission_link?: string | null
+          contact_info?: string | null
           courses_offered?: string[] | null
           created_at?: string
           cutoff_scores?: Json | null
@@ -255,6 +273,7 @@ export type Database = {
       }
       quiz_sessions: {
         Row: {
+          category_scores: Json | null
           completed: boolean
           completed_at: string | null
           created_at: string
@@ -265,6 +284,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category_scores?: Json | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -275,6 +295,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category_scores?: Json | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -399,6 +420,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_recommendations: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          id: string
+          item_id: string
+          match_reason: string | null
+          quiz_session_id: string
+          recommendation_type: string
+          user_id: string
+        }
+        Insert: {
+          confidence_score: number
+          created_at?: string
+          id?: string
+          item_id: string
+          match_reason?: string | null
+          quiz_session_id: string
+          recommendation_type: string
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          item_id?: string
+          match_reason?: string | null
+          quiz_session_id?: string
+          recommendation_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

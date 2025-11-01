@@ -38,6 +38,8 @@ interface College {
   fees: number | null;
   rating: number | null;
   courses_offered: string[] | null;
+  contact_info: string | null;
+  admission_link: string | null;
 }
 
 const UP_DISTRICTS = [
@@ -70,7 +72,9 @@ const ManageColleges = () => {
     description: '',
     fees: '',
     rating: '',
-    courses_offered: ''
+    courses_offered: '',
+    contact_info: '',
+    admission_link: ''
   });
 
   useEffect(() => {
@@ -108,7 +112,9 @@ const ManageColleges = () => {
       description: formData.description || null,
       fees: formData.fees ? parseFloat(formData.fees) : null,
       rating: formData.rating ? parseFloat(formData.rating) : null,
-      courses_offered: formData.courses_offered ? formData.courses_offered.split(',').map(c => c.trim()) : null
+      courses_offered: formData.courses_offered ? formData.courses_offered.split(',').map(c => c.trim()) : null,
+      contact_info: formData.contact_info || null,
+      admission_link: formData.admission_link || null
     };
 
     if (editingCollege) {
@@ -158,7 +164,9 @@ const ManageColleges = () => {
       description: college.description || '',
       fees: college.fees?.toString() || '',
       rating: college.rating?.toString() || '',
-      courses_offered: college.courses_offered?.join(', ') || ''
+      courses_offered: college.courses_offered?.join(', ') || '',
+      contact_info: college.contact_info || '',
+      admission_link: college.admission_link || ''
     });
     setDialogOpen(true);
   };
@@ -193,7 +201,9 @@ const ManageColleges = () => {
       description: '',
       fees: '',
       rating: '',
-      courses_offered: ''
+      courses_offered: '',
+      contact_info: '',
+      admission_link: ''
     });
     setEditingCollege(null);
     setDialogOpen(false);
@@ -273,12 +283,30 @@ const ManageColleges = () => {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="admission_link">Admission Link</Label>
+                    <Input
+                      id="admission_link"
+                      type="url"
+                      value={formData.admission_link}
+                      onChange={(e) => setFormData({ ...formData, admission_link: e.target.value })}
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="fees">Annual Fees (₹)</Label>
                     <Input
                       id="fees"
                       type="number"
                       value={formData.fees}
                       onChange={(e) => setFormData({ ...formData, fees: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contact_info">Contact Info</Label>
+                    <Input
+                      id="contact_info"
+                      value={formData.contact_info}
+                      onChange={(e) => setFormData({ ...formData, contact_info: e.target.value })}
+                      placeholder="Phone, Email, Address"
                     />
                   </div>
                   <div>

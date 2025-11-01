@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Career {
   id: string;
@@ -32,6 +33,10 @@ interface Career {
   description: string;
   category: string | null;
   requirements: string | null;
+  skills_required: string[] | null;
+  salary_range: string | null;
+  industry: string | null;
+  job_type: string | null;
 }
 
 const ManageCareers = () => {
@@ -45,7 +50,11 @@ const ManageCareers = () => {
     title: '',
     description: '',
     category: '',
-    requirements: ''
+    requirements: '',
+    skills_required: '',
+    salary_range: '',
+    industry: '',
+    job_type: ''
   });
 
   useEffect(() => {
@@ -78,7 +87,11 @@ const ManageCareers = () => {
       title: formData.title,
       description: formData.description,
       category: formData.category || null,
-      requirements: formData.requirements || null
+      requirements: formData.requirements || null,
+      skills_required: formData.skills_required ? formData.skills_required.split(',').map(s => s.trim()) : null,
+      salary_range: formData.salary_range || null,
+      industry: formData.industry || null,
+      job_type: formData.job_type || null
     };
 
     if (editingCareer) {
@@ -123,7 +136,11 @@ const ManageCareers = () => {
       title: career.title,
       description: career.description,
       category: career.category || '',
-      requirements: career.requirements || ''
+      requirements: career.requirements || '',
+      skills_required: career.skills_required?.join(', ') || '',
+      salary_range: career.salary_range || '',
+      industry: career.industry || '',
+      job_type: career.job_type || ''
     });
     setDialogOpen(true);
   };
@@ -153,7 +170,11 @@ const ManageCareers = () => {
       title: '',
       description: '',
       category: '',
-      requirements: ''
+      requirements: '',
+      skills_required: '',
+      salary_range: '',
+      industry: '',
+      job_type: ''
     });
     setEditingCareer(null);
     setDialogOpen(false);
@@ -205,6 +226,49 @@ const ManageCareers = () => {
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       placeholder="Engineering, Medical, Business, etc."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="industry">Industry</Label>
+                    <Input
+                      id="industry"
+                      value={formData.industry}
+                      onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                      placeholder="IT, Healthcare, Finance, etc."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="job_type">Job Type</Label>
+                    <Select
+                      value={formData.job_type}
+                      onValueChange={(value) => setFormData({ ...formData, job_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select job type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Technical">Technical</SelectItem>
+                        <SelectItem value="Non-Technical">Non-Technical</SelectItem>
+                        <SelectItem value="Both">Both</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="salary_range">Salary Range</Label>
+                    <Input
+                      id="salary_range"
+                      value={formData.salary_range}
+                      onChange={(e) => setFormData({ ...formData, salary_range: e.target.value })}
+                      placeholder="₹3-6 LPA, ₹10-15 LPA, etc."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="skills_required">Skills Required (comma-separated)</Label>
+                    <Input
+                      id="skills_required"
+                      value={formData.skills_required}
+                      onChange={(e) => setFormData({ ...formData, skills_required: e.target.value })}
+                      placeholder="Python, Communication, Problem Solving"
                     />
                   </div>
                   <div>
