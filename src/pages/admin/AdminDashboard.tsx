@@ -95,6 +95,14 @@ const AdminDashboard = () => {
       link: '/admin/verified-jobs',
       stat: 'Live Postings',
       color: 'text-rose-600'
+    },
+    {
+      title: 'Quiz Questions',
+      description: 'Manage adaptive aptitude test questions',
+      icon: GraduationCap,
+      link: '/admin/quiz-questions',
+      stat: 'Dynamic Tests',
+      color: 'text-indigo-600'
     }
   ];
 

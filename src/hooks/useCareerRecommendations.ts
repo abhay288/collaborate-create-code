@@ -6,7 +6,7 @@ interface QuizResponse {
   question_id: string;
   category: string;
   selected_option: string;
-  isCorrect: boolean;
+  points_earned: number;
 }
 
 interface CareerRecommendation {

@@ -29,7 +29,7 @@ export default function Quiz() {
     question_id: string;
     category: string;
     selected_option: string;
-    isCorrect: boolean;
+    points_earned: number;
   }>>([]);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -50,19 +50,40 @@ export default function Quiz() {
     return () => clearInterval(timer);
   }, [isPaused]);
 
-  // Load quiz questions from database
+  // Load quiz questions from database based on user profile
   useEffect(() => {
     const loadQuestions = async () => {
       try {
+        // Get user profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error('Please log in to take the quiz');
+          navigate('/login');
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('class_level, study_area')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        // Use default values if profile not set
+        const classLevel = profile?.class_level || '12th';
+        const studyArea = profile?.study_area || 'All';
+
+        // Fetch filtered questions using the database function
         const { data, error } = await supabase
-          .from('quiz_questions')
-          .select('*')
-          .order('created_at');
+          .rpc('get_filtered_quiz_questions', {
+            p_class_level: classLevel,
+            p_study_area: studyArea,
+            p_limit: 20
+          });
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-          toast.error('No quiz questions available. Please contact support.');
+          toast.error('No quiz questions available for your profile. Please contact support.');
           navigate('/dashboard');
           return;
         }
@@ -111,40 +132,37 @@ export default function Quiz() {
         ? options[optionIndex] 
         : options[optionIndex]?.text || `Option ${optionIndex + 1}`;
 
-      // Check if option has isCorrect property
-      const isCorrect = typeof options[optionIndex] === 'object' 
-        ? options[optionIndex]?.isCorrect || false
-        : false;
+      // Calculate points earned (1-5 scale based on option or default to 1)
+      const pointsEarned = typeof options[optionIndex] === 'object' 
+        ? options[optionIndex]?.points || 1
+        : 1;
       
-      const responseData = await saveResponse(
+      await saveResponse(
         sessionId,
         question.id,
         selectedOptionText,
-        question.category,
-        isCorrect
+        pointsEarned
       );
 
-      if (responseData) {
-        const existingIndex = savedResponses.findIndex(r => r.question_id === question.id);
-        if (existingIndex >= 0) {
-          const updated = [...savedResponses];
-          updated[existingIndex] = {
-            question_id: question.id,
-            category: responseData.category,
-            selected_option: selectedOptionText,
-            isCorrect: responseData.isCorrect
-          };
-          setSavedResponses(updated);
-        } else {
-          setSavedResponses([...savedResponses, {
-            question_id: question.id,
-            category: responseData.category,
-            selected_option: selectedOptionText,
-            isCorrect: responseData.isCorrect
-          }]);
-        }
-        toast.success('Answer saved', { duration: 1000 });
+      const existingIndex = savedResponses.findIndex(r => r.question_id === question.id);
+      if (existingIndex >= 0) {
+        const updated = [...savedResponses];
+        updated[existingIndex] = {
+          question_id: question.id,
+          category: question.category,
+          selected_option: selectedOptionText,
+          points_earned: pointsEarned
+        };
+        setSavedResponses(updated);
+      } else {
+        setSavedResponses([...savedResponses, {
+          question_id: question.id,
+          category: question.category,
+          selected_option: selectedOptionText,
+          points_earned: pointsEarned
+        }]);
       }
+      toast.success('Answer saved', { duration: 1000 });
     } catch (error) {
       console.error('Error saving answer:', error);
       toast.error('Failed to save answer. Please try again.');
@@ -178,12 +196,29 @@ export default function Quiz() {
     }
 
     try {
-      // Calculate score based on saved responses
-      const correctAnswers = savedResponses.filter(r => r.isCorrect).length;
-      const score = Math.round((correctAnswers / savedResponses.length) * 100);
+      // Calculate total score and category scores
+      const totalPoints = savedResponses.reduce((sum, r) => sum + r.points_earned, 0);
+      const maxPoints = savedResponses.length * 5; // Assuming max 5 points per question
+      const score = Math.round((totalPoints / maxPoints) * 100);
 
-      // Complete the session
+      // Calculate category-wise scores
+      const categoryScores: Record<string, { total: number; max: number }> = {};
+      savedResponses.forEach(response => {
+        if (!categoryScores[response.category]) {
+          categoryScores[response.category] = { total: 0, max: 0 };
+        }
+        categoryScores[response.category].total += response.points_earned;
+        categoryScores[response.category].max += 5;
+      });
+
+      // Complete the session with category scores
       await completeSession(sessionId, score);
+      
+      // Update session with category scores
+      await supabase
+        .from('quiz_sessions')
+        .update({ category_scores: categoryScores })
+        .eq('id', sessionId);
 
       // Generate AI recommendations
       await generateRecommendations(sessionId, savedResponses);

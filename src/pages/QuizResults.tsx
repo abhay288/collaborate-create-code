@@ -58,37 +58,46 @@ export default function QuizResults() {
         if (sessionError) throw sessionError;
         setQuizSession(session);
 
-        // Fetch quiz responses
+        // Fetch quiz responses with question details
         const { data: responses, error: responsesError } = await supabase
           .from('quiz_responses')
-          .select('*')
+          .select(`
+            *,
+            quiz_questions (category)
+          `)
           .eq('quiz_session_id', sessionId);
 
         if (responsesError) throw responsesError;
 
-        // Calculate category scores
-        const categoryMap: Record<string, { correct: number; total: number }> = {};
-        responses.forEach((response: any) => {
-          const category = response.selected_option.toLowerCase().includes('technical') ? 'technical' :
-                          response.selected_option.toLowerCase().includes('logic') ? 'logical' :
-                          response.selected_option.toLowerCase().includes('creative') ? 'creative' :
-                          response.selected_option.toLowerCase().includes('analyt') ? 'analytical' :
-                          response.selected_option.toLowerCase().includes('quant') ? 'quantitative' :
-                          response.selected_option.toLowerCase().includes('verbal') ? 'verbal' : 'interpersonal';
+        // Use category_scores from session if available, otherwise calculate from responses
+        if (session.category_scores && Object.keys(session.category_scores).length > 0) {
+          const scores = Object.entries(session.category_scores).map(([category, data]: [string, any]) => ({
+            category: category.charAt(0).toUpperCase() + category.slice(1),
+            score: Math.round((data.total / data.max) * 100),
+            maxScore: 100
+          }));
+          setCategoryScores(scores);
+        } else {
+          // Calculate category scores from responses with points
+          const categoryMap: Record<string, { total: number; max: number }> = {};
+          
+          responses.forEach((response: any) => {
+            const category = response.quiz_questions?.category || 'general';
+            if (!categoryMap[category]) {
+              categoryMap[category] = { total: 0, max: 0 };
+            }
+            categoryMap[category].total += response.points_earned || 0;
+            categoryMap[category].max += 5; // Max 5 points per question
+          });
 
-          if (!categoryMap[category]) {
-            categoryMap[category] = { correct: 0, total: 0 };
-          }
-          categoryMap[category].total++;
-        });
+          const scores = Object.entries(categoryMap).map(([category, data]) => ({
+            category: category.charAt(0).toUpperCase() + category.slice(1),
+            score: Math.round((data.total / data.max) * 100),
+            maxScore: 100
+          }));
 
-        const scores = Object.entries(categoryMap).map(([category, data]) => ({
-          category,
-          score: Math.round((data.correct / data.total) * 100) || 60 + Math.floor(Math.random() * 30),
-          maxScore: 100
-        }));
-
-        setCategoryScores(scores);
+          setCategoryScores(scores);
+        }
 
         // Load career recommendations
         await getRecommendations(sessionId);
@@ -100,24 +109,24 @@ export default function QuizResults() {
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (profile) {
             // Map opportunities based on quiz results
             const aptitudeProfile = {
               user_id: user.id,
               skills: {
-                logical: scores.find(s => s.category === 'logical')?.score || 70,
-                verbal: scores.find(s => s.category === 'verbal')?.score || 70,
-                quantitative: scores.find(s => s.category === 'quantitative')?.score || 70,
-                creative: scores.find(s => s.category === 'creative')?.score || 70,
-                technical: scores.find(s => s.category === 'technical')?.score || 70,
-                interpersonal: scores.find(s => s.category === 'interpersonal')?.score || 70
+                logical: categoryScores.find(s => s.category.toLowerCase() === 'logical')?.score || 70,
+                verbal: categoryScores.find(s => s.category.toLowerCase() === 'verbal')?.score || 70,
+                quantitative: categoryScores.find(s => s.category.toLowerCase() === 'quantitative')?.score || 70,
+                creative: categoryScores.find(s => s.category.toLowerCase() === 'creative')?.score || 70,
+                technical: categoryScores.find(s => s.category.toLowerCase() === 'technical')?.score || 70,
+                interpersonal: categoryScores.find(s => s.category.toLowerCase() === 'interpersonal')?.score || 70
               },
               interests: profile.interests || [],
               preferred_locations: ['Uttar Pradesh'],
-              academic_level: (profile.education_level?.includes('UG') ? 'UG' : 
-                              profile.education_level?.includes('PG') ? 'PG' : 'Diploma') as 'UG' | 'PG' | 'Diploma',
+              academic_level: (profile.class_level === 'UG' ? 'UG' : 
+                              profile.class_level === 'PG' ? 'PG' : 'Diploma') as 'UG' | 'PG' | 'Diploma',
               score_percentile_or_band: session.score || 70
             };
 

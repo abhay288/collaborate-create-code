@@ -27,6 +27,8 @@ const Onboarding = () => {
     fullName: "",
     age: "",
     educationLevel: "",
+    classLevel: "",
+    studyArea: "",
     bio: "",
     interests: [] as string[],
     goals: [] as string[],
@@ -155,6 +157,44 @@ const Onboarding = () => {
                       <SelectItem value="undergraduate">Undergraduate</SelectItem>
                       <SelectItem value="graduate">Graduate</SelectItem>
                       <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="classLevel">Current Class/Level</Label>
+                  <Select
+                    value={formData.classLevel}
+                    onValueChange={(value) => setFormData({ ...formData, classLevel: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your current class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10th">10th Standard</SelectItem>
+                      <SelectItem value="12th">12th Standard</SelectItem>
+                      <SelectItem value="UG">Undergraduate (UG)</SelectItem>
+                      <SelectItem value="PG">Postgraduate (PG)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="studyArea">Area of Study</Label>
+                  <Select
+                    value={formData.studyArea}
+                    onValueChange={(value) => setFormData({ ...formData, studyArea: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your study area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Science">Science</SelectItem>
+                      <SelectItem value="Commerce">Commerce</SelectItem>
+                      <SelectItem value="Arts">Arts</SelectItem>
+                      <SelectItem value="Engineering">Engineering</SelectItem>
+                      <SelectItem value="Medical">Medical</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -162,6 +162,7 @@ export type Database = {
       profiles: {
         Row: {
           age: number | null
+          class_level: string | null
           created_at: string
           education_level: string | null
           full_name: string | null
@@ -169,10 +170,12 @@ export type Database = {
           id: string
           interests: string[] | null
           profile_picture_url: string | null
+          study_area: string | null
           updated_at: string
         }
         Insert: {
           age?: number | null
+          class_level?: string | null
           created_at?: string
           education_level?: string | null
           full_name?: string | null
@@ -180,10 +183,12 @@ export type Database = {
           id: string
           interests?: string[] | null
           profile_picture_url?: string | null
+          study_area?: string | null
           updated_at?: string
         }
         Update: {
           age?: number | null
+          class_level?: string | null
           created_at?: string
           education_level?: string | null
           full_name?: string | null
@@ -191,6 +196,7 @@ export type Database = {
           id?: string
           interests?: string[] | null
           profile_picture_url?: string | null
+          study_area?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -201,7 +207,10 @@ export type Database = {
           created_at: string
           id: string
           options: Json
+          points: number | null
           question_text: string
+          target_class_levels: string[] | null
+          target_study_areas: string[] | null
           updated_at: string
         }
         Insert: {
@@ -209,7 +218,10 @@ export type Database = {
           created_at?: string
           id?: string
           options: Json
+          points?: number | null
           question_text: string
+          target_class_levels?: string[] | null
+          target_study_areas?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -217,7 +229,10 @@ export type Database = {
           created_at?: string
           id?: string
           options?: Json
+          points?: number | null
           question_text?: string
+          target_class_levels?: string[] | null
+          target_study_areas?: string[] | null
           updated_at?: string
         }
         Relationships: []
@@ -226,6 +241,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          points_earned: number | null
           question_id: string
           quiz_session_id: string
           selected_option: string
@@ -234,6 +250,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          points_earned?: number | null
           question_id: string
           quiz_session_id: string
           selected_option: string
@@ -242,6 +259,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          points_earned?: number | null
           question_id?: string
           quiz_session_id?: string
           selected_option?: string
@@ -630,6 +648,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_filtered_quiz_questions: {
+        Args: { p_class_level: string; p_limit?: number; p_study_area: string }
+        Returns: {
+          category: Database["public"]["Enums"]["quiz_category"]
+          created_at: string
+          id: string
+          options: Json
+          points: number | null
+          question_text: string
+          target_class_levels: string[] | null
+          target_study_areas: string[] | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "quiz_questions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -646,6 +684,9 @@ export type Database = {
         | "analytical_skills"
         | "creativity"
         | "technical_interests"
+        | "quantitative"
+        | "verbal"
+        | "interpersonal"
       scholarship_type: "government" | "private" | "ngo"
     }
     CompositeTypes: {
@@ -781,6 +822,9 @@ export const Constants = {
         "analytical_skills",
         "creativity",
         "technical_interests",
+        "quantitative",
+        "verbal",
+        "interpersonal",
       ],
       scholarship_type: ["government", "private", "ngo"],
     },

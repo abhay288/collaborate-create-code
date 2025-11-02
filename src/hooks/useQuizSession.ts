@@ -58,25 +58,48 @@ export const useQuizSession = () => {
     sessionId: string,
     questionId: string,
     selectedOption: string,
-    category: string,
-    isCorrect: boolean
+    pointsEarned: number
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase
+      // First check if response already exists
+      const { data: existingResponse } = await supabase
         .from('quiz_responses')
-        .insert({
-          user_id: user.id,
-          quiz_session_id: sessionId,
-          question_id: questionId,
-          selected_option: selectedOption
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('quiz_session_id', sessionId)
+        .eq('question_id', questionId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existingResponse) {
+        // Update existing response
+        const { error } = await supabase
+          .from('quiz_responses')
+          .update({
+            selected_option: selectedOption,
+            points_earned: pointsEarned
+          })
+          .eq('id', existingResponse.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new response
+        const { error } = await supabase
+          .from('quiz_responses')
+          .insert({
+            user_id: user.id,
+            quiz_session_id: sessionId,
+            question_id: questionId,
+            selected_option: selectedOption,
+            points_earned: pointsEarned
+          });
+
+        if (error) throw error;
+      }
       
-      return { category, isCorrect };
+      return true;
     } catch (error) {
       console.error('Error saving response:', error);
       throw error;
