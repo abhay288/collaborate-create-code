@@ -20,15 +20,20 @@ const AnalyticsCard = ({
   trend 
 }: AnalyticsCardProps) => {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
+    <Card className="group border-primary/20 hover:border-primary/40 overflow-hidden relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+        <CardTitle className="text-sm font-medium group-hover:text-primary transition-colors">
           {title}
         </CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 group-hover:from-primary/20 group-hover:to-accent/20 transition-all">
+          <Icon className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="relative z-10">
+        <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          {value}
+        </div>
         {description && (
           <p className="text-xs text-muted-foreground mt-1">
             {description}

@@ -19,30 +19,36 @@ const Navigation = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all animate-pulse-glow">
               <span className="text-primary-foreground font-bold text-lg">A</span>
             </div>
-            <span className="font-heading font-bold text-xl">Avsar</span>
+            <span className="font-heading font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Avsar
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/dashboard" className="text-foreground hover:text-primary transition-colors">
-              Dashboard
+            <Link to="/dashboard" className="relative text-foreground hover:text-primary transition-all group">
+              <span>Dashboard</span>
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link to="/careers" className="text-foreground hover:text-primary transition-colors">
-              Careers
+            <Link to="/careers" className="relative text-foreground hover:text-primary transition-all group">
+              <span>Careers</span>
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link to="/colleges" className="text-foreground hover:text-primary transition-colors">
-              Colleges
+            <Link to="/colleges" className="relative text-foreground hover:text-primary transition-all group">
+              <span>Colleges</span>
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link to="/scholarships" className="text-foreground hover:text-primary transition-colors">
-              Scholarships
+            <Link to="/scholarships" className="relative text-foreground hover:text-primary transition-all group">
+              <span>Scholarships</span>
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
             </Link>
           </div>
 

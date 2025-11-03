@@ -146,10 +146,13 @@ export default function QuizResults() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading your results...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center">
+        <div className="text-center animate-fade-up">
+          <div className="relative">
+            <div className="absolute inset-0 animate-pulse-glow rounded-full" />
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary relative z-10" />
+          </div>
+          <p className="text-muted-foreground text-lg">Loading your results...</p>
         </div>
       </div>
     );
@@ -186,39 +189,43 @@ export default function QuizResults() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 py-8 px-4">
       <div className="container max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Trophy className="h-8 w-8 text-primary" />
+        <div className="text-center mb-8 animate-fade-up">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 mb-4 animate-pulse-glow">
+            <Trophy className="h-10 w-10 text-primary animate-float" />
           </div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Assessment Complete!</h1>
-          <p className="text-muted-foreground">Here's your personalized career guidance based on your aptitude</p>
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">
+            Assessment Complete!
+          </h1>
+          <p className="text-muted-foreground text-lg">Here's your personalized career guidance based on your aptitude ✨</p>
         </div>
 
         {/* Overall Score */}
-        <Card className="mb-8">
-          <CardHeader className="text-center">
-            <CardTitle className="text-6xl font-bold text-primary mb-2">{overallScore}%</CardTitle>
-            <CardDescription className="text-lg">Overall Aptitude Score</CardDescription>
+        <Card className="mb-8 border-primary/20 shadow-2xl animate-scale-in">
+          <CardHeader className="text-center bg-gradient-to-br from-primary/10 via-accent/10 to-primary/10">
+            <CardTitle className="text-7xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2 animate-pulse-glow">
+              {overallScore}%
+            </CardTitle>
+            <CardDescription className="text-xl font-medium">Overall Aptitude Score</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-center gap-4 mb-6">
-              <Button onClick={handleShare} variant="outline">
-                <Share2 className="h-4 w-4 mr-2" />
+            <div className="flex justify-center gap-4 mb-6 flex-wrap">
+              <Button onClick={handleShare} variant="outline" className="group hover:bg-primary hover:text-primary-foreground transition-all">
+                <Share2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                 Share Results
               </Button>
-              <Button onClick={handleDownload} variant="outline">
-                <Download className="h-4 w-4 mr-2" />
+              <Button onClick={handleDownload} variant="outline" className="group hover:bg-accent hover:text-accent-foreground transition-all">
+                <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                 Download PDF
               </Button>
-              <Button onClick={handleRetake} variant="outline">
-                <RotateCcw className="h-4 w-4 mr-2" />
+              <Button onClick={handleRetake} variant="outline" className="group hover:bg-primary hover:text-primary-foreground transition-all">
+                <RotateCcw className="h-4 w-4 mr-2 group-hover:rotate-180 transition-transform" />
                 Retake Quiz
               </Button>
             </div>
-            <Progress value={overallScore} className="h-3" />
+            <Progress value={overallScore} className="h-4 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:via-accent [&>div]:to-primary [&>div]:animate-shimmer [&>div]:bg-[length:200%_100%]" />
           </CardContent>
         </Card>
 
@@ -288,25 +295,38 @@ export default function QuizResults() {
             </div>
 
             {/* Category Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Detailed Category Analysis</CardTitle>
+            <Card className="border-primary/20 shadow-xl animate-fade-up" style={{ animationDelay: '0.3s', animationFillMode: 'backwards' }}>
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Detailed Category Analysis
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {categoryScores.map((cat, index) => (
-                  <div key={index}>
+                  <div 
+                    key={index} 
+                    className="animate-fade-in hover:bg-gradient-to-r hover:from-background hover:to-muted/20 p-3 rounded-lg transition-all"
+                    style={{ animationDelay: `${0.4 + index * 0.1}s`, animationFillMode: 'backwards' }}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h4 className="font-semibold">{cat.category}</h4>
+                        <h4 className="font-semibold text-lg">{cat.category}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {categoryDescriptions[cat.category as keyof typeof categoryDescriptions]}
+                          {categoryDescriptions[cat.category.toLowerCase() as keyof typeof categoryDescriptions]}
                         </p>
                       </div>
-                      <Badge variant={cat.score >= 80 ? "default" : cat.score >= 60 ? "secondary" : "outline"}>
+                      <Badge 
+                        variant={cat.score >= 80 ? "default" : cat.score >= 60 ? "secondary" : "outline"}
+                        className="text-lg px-3 py-1 animate-scale-in"
+                      >
                         {cat.score}%
                       </Badge>
                     </div>
-                    <Progress value={cat.score} className="h-2" />
+                    <Progress 
+                      value={cat.score} 
+                      className="h-3 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-accent" 
+                    />
                     {index < categoryScores.length - 1 && <Separator className="mt-6" />}
                   </div>
                 ))}

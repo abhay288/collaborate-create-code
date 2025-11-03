@@ -246,10 +246,13 @@ export default function Quiz() {
 
   if (loadingQuestions || quizQuestions.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading quiz questions...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center">
+        <div className="text-center animate-fade-up">
+          <div className="relative">
+            <div className="absolute inset-0 animate-pulse-glow rounded-full" />
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary relative z-10" />
+          </div>
+          <p className="text-muted-foreground text-lg">Loading quiz questions...</p>
         </div>
       </div>
     );
@@ -262,12 +265,14 @@ export default function Quiz() {
     : currentQuestionData?.options?.options || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 py-8 px-4">
       <div className="container max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-up">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-foreground">Aptitude Assessment</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Aptitude Assessment
+            </h1>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-5 w-5" />
@@ -300,17 +305,17 @@ export default function Quiz() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Question {currentQuestion + 1} of {quizQuestions.length}</span>
-              <span>{Math.round(progress)}% Complete</span>
+              <span className="font-bold text-primary">{Math.round(progress)}% Complete</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-3 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-accent [&>div]:animate-pulse" />
           </div>
         </div>
 
         {/* Question Card */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-6 border-primary/20 shadow-xl hover:shadow-2xl transition-all duration-300 animate-scale-in">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+              <span className="text-sm font-medium text-primary bg-gradient-to-r from-primary/10 to-accent/10 px-4 py-2 rounded-full border border-primary/20 animate-pulse-glow">
                 {currentQuestionData.category}
               </span>
               <span className="text-sm text-muted-foreground">
@@ -327,10 +332,15 @@ export default function Quiz() {
               <div className="space-y-3">
                 {options.map((option: any, index: number) => {
                   const optionText = typeof option === 'string' ? option : option?.text || `Option ${index + 1}`;
+                  const isSelected = selectedAnswer === index;
                   return (
                     <div
                       key={index}
-                      className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer"
+                      className={`flex items-center space-x-3 border-2 rounded-lg p-4 transition-all duration-300 cursor-pointer
+                        ${isSelected 
+                          ? 'bg-gradient-to-r from-primary/10 to-accent/10 border-primary shadow-lg scale-105' 
+                          : 'border-muted hover:border-primary/50 hover:bg-accent/20 hover:scale-102'
+                        }`}
                     >
                       <RadioGroupItem value={index.toString()} id={`option-${index}`} />
                       <Label

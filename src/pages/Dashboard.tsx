@@ -84,22 +84,24 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/30">
       <Navigation />
       
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Avatar className="h-16 w-16">
+        <div className="mb-8 animate-fade-up">
+          <div className="flex items-center gap-4 mb-4 p-6 rounded-2xl bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border border-primary/20 shadow-lg">
+            <Avatar className="h-16 w-16 ring-4 ring-primary/20 animate-pulse-glow">
               <AvatarImage src={profile?.profile_picture_url || ""} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xl">
                 {userInitials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold">Welcome back, {userName}!</h1>
-              <p className="text-muted-foreground">Let's continue your career journey</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Welcome back, {userName}!
+              </h1>
+              <p className="text-muted-foreground">Let's continue your career journey ✨</p>
             </div>
           </div>
         </div>
@@ -108,56 +110,70 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {!loading && (
             <>
-              <AnalyticsCard
-                title="Quizzes Taken"
-                value={analytics.quizzesTaken}
-                icon={BookOpen}
-                description="Completed assessments"
-              />
-              <AnalyticsCard
-                title="Career Matches"
-                value={analytics.recommendationsReceived}
-                icon={Target}
-                description="AI-generated recommendations"
-              />
-              <AnalyticsCard
-                title="Saved Colleges"
-                value={analytics.collegesSaved}
-                icon={Award}
-                description="In your favorites"
-              />
-              <AnalyticsCard
-                title="Saved Scholarships"
-                value={analytics.scholarshipsSaved}
-                icon={Heart}
-                description="Opportunities tracked"
-              />
+              <div className="animate-fade-up" style={{ animationDelay: '0.1s', animationFillMode: 'backwards' }}>
+                <AnalyticsCard
+                  title="Quizzes Taken"
+                  value={analytics.quizzesTaken}
+                  icon={BookOpen}
+                  description="Completed assessments"
+                />
+              </div>
+              <div className="animate-fade-up" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
+                <AnalyticsCard
+                  title="Career Matches"
+                  value={analytics.recommendationsReceived}
+                  icon={Target}
+                  description="AI-generated recommendations"
+                />
+              </div>
+              <div className="animate-fade-up" style={{ animationDelay: '0.3s', animationFillMode: 'backwards' }}>
+                <AnalyticsCard
+                  title="Saved Colleges"
+                  value={analytics.collegesSaved}
+                  icon={Award}
+                  description="In your favorites"
+                />
+              </div>
+              <div className="animate-fade-up" style={{ animationDelay: '0.4s', animationFillMode: 'backwards' }}>
+                <AnalyticsCard
+                  title="Saved Scholarships"
+                  value={analytics.scholarshipsSaved}
+                  icon={Heart}
+                  description="Opportunities tracked"
+                />
+              </div>
             </>
           )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Next Steps */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recommended Next Steps</CardTitle>
+          <div className="lg:col-span-2 animate-fade-up" style={{ animationDelay: '0.5s', animationFillMode: 'backwards' }}>
+            <Card className="border-primary/20 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary animate-pulse" />
+                  Recommended Next Steps
+                </CardTitle>
                 <CardDescription>Complete these actions to get the most out of Avsar</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {nextSteps.map((step, index) => {
                   const Icon = step.icon;
                   return (
-                    <div key={index} className="flex items-start gap-4 p-4 rounded-lg border hover:border-primary transition-colors">
-                      <div className="mt-1">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div 
+                      key={index} 
+                      className="group flex items-start gap-4 p-4 rounded-lg border border-muted hover:border-primary/50 transition-all duration-300 hover:shadow-md hover:scale-[1.02] bg-gradient-to-r from-background to-muted/20"
+                    >
+                      <div className="mt-1 p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                        <Icon className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold mb-1">{step.title}</h3>
+                        <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">{step.title}</h3>
                         <p className="text-sm text-muted-foreground mb-3">{step.description}</p>
-                        <Button asChild size="sm" variant="outline">
+                        <Button asChild size="sm" variant="outline" className="group-hover:bg-primary group-hover:text-primary-foreground transition-all">
                           <Link to={step.link}>
-                            Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                            Get Started <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                           </Link>
                         </Button>
                       </div>
@@ -171,36 +187,45 @@ const Dashboard = () => {
           {/* Recent Activity & Progress */}
           <div className="space-y-6">
             {/* Profile Completion */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Completion</CardTitle>
+            <Card className="animate-fade-up border-accent/20 shadow-lg hover:shadow-xl transition-shadow" style={{ animationDelay: '0.6s', animationFillMode: 'backwards' }}>
+              <CardHeader className="bg-gradient-to-r from-accent/5 to-primary/5">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-accent" />
+                  Profile Completion
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-muted-foreground">Complete your profile</span>
-                      <span className="font-medium">{profileCompletion}%</span>
+                      <span className="font-bold text-primary">{profileCompletion}%</span>
                     </div>
-                    <Progress value={profileCompletion} className="h-2" />
+                    <Progress value={profileCompletion} className="h-3 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-accent" />
                   </div>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link to="/profile">Complete Profile</Link>
+                  <Button asChild variant="outline" className="w-full group hover:bg-gradient-to-r hover:from-primary hover:to-accent hover:text-white hover:border-transparent transition-all">
+                    <Link to="/profile">
+                      Complete Profile 
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
             {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+            <Card className="animate-fade-up border-primary/20 shadow-lg" style={{ animationDelay: '0.7s', animationFillMode: 'backwards' }}>
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary animate-pulse" />
+                  Recent Activity
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-background to-muted/30 animate-fade-in">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 animate-scale-in" />
                       <div className="flex-1">
                         <p className="text-sm font-medium">{activity.action}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
