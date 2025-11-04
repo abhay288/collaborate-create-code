@@ -1,186 +1,74 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Heart, MapPin, DollarSign, Star, Users, BookOpen, Calendar } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Heart, MapPin, DollarSign, Star, BookOpen, ExternalLink } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { toast } from "sonner";
-
-const colleges = [
-  {
-    id: 1,
-    name: "Massachusetts Institute of Technology",
-    shortName: "MIT",
-    location: "Cambridge, Massachusetts",
-    type: "Private",
-    rating: 4.9,
-    students: "11,520",
-    acceptance: "4%",
-    tuition: "$57,590",
-    cutoff: "99.5%",
-    courses: ["Computer Science", "Engineering", "Mathematics", "Physics"],
-    programs: 50,
-    description: "World-renowned research university known for innovation in science and technology.",
-    facilities: ["Research Labs", "Innovation Centers", "Libraries", "Sports Complex"],
-    applicationDeadline: "January 1, 2025"
-  },
-  {
-    id: 2,
-    name: "Stanford University",
-    shortName: "Stanford",
-    location: "Stanford, California",
-    type: "Private",
-    rating: 4.9,
-    students: "17,249",
-    acceptance: "4.3%",
-    tuition: "$56,169",
-    cutoff: "99%",
-    courses: ["Engineering", "Business", "Medicine", "Law"],
-    programs: 65,
-    description: "Leading research university in Silicon Valley with strong entrepreneurship focus.",
-    facilities: ["Innovation Labs", "Medical Centers", "Business Incubators", "Athletic Facilities"],
-    applicationDeadline: "January 5, 2025"
-  },
-  {
-    id: 3,
-    name: "Carnegie Mellon University",
-    shortName: "CMU",
-    location: "Pittsburgh, Pennsylvania",
-    type: "Private",
-    rating: 4.8,
-    students: "15,818",
-    acceptance: "15%",
-    tuition: "$59,864",
-    cutoff: "98%",
-    courses: ["Computer Science", "Robotics", "Business", "Drama"],
-    programs: 45,
-    description: "Top-tier university excelling in technology, arts, and interdisciplinary programs.",
-    facilities: ["Robotics Institute", "Design Studios", "Performance Venues", "Tech Labs"],
-    applicationDeadline: "January 3, 2025"
-  },
-  {
-    id: 4,
-    name: "University of California, Berkeley",
-    shortName: "UC Berkeley",
-    location: "Berkeley, California",
-    type: "Public",
-    rating: 4.7,
-    students: "45,057",
-    acceptance: "14%",
-    tuition: "$44,115",
-    cutoff: "96%",
-    courses: ["Engineering", "Sciences", "Business", "Social Sciences"],
-    programs: 80,
-    description: "Premier public university with world-class research and diverse academic programs.",
-    facilities: ["Research Centers", "Libraries", "Recreation Centers", "Innovation Hubs"],
-    applicationDeadline: "November 30, 2024"
-  },
-  {
-    id: 5,
-    name: "Georgia Institute of Technology",
-    shortName: "Georgia Tech",
-    location: "Atlanta, Georgia",
-    type: "Public",
-    rating: 4.6,
-    students: "40,418",
-    acceptance: "21%",
-    tuition: "$33,794",
-    cutoff: "94%",
-    courses: ["Engineering", "Computing", "Sciences", "Business"],
-    programs: 55,
-    description: "Leading technological university with strong engineering and computing programs.",
-    facilities: ["Tech Labs", "Innovation Center", "Research Facilities", "Sports Complex"],
-    applicationDeadline: "January 10, 2025"
-  },
-  {
-    id: 6,
-    name: "University of Michigan",
-    shortName: "UMich",
-    location: "Ann Arbor, Michigan",
-    type: "Public",
-    rating: 4.7,
-    students: "47,907",
-    acceptance: "23%",
-    tuition: "$53,232",
-    cutoff: "93%",
-    courses: ["Engineering", "Business", "Medicine", "Arts"],
-    programs: 75,
-    description: "Top public university with comprehensive programs and vibrant campus life.",
-    facilities: ["Medical Centers", "Business School", "Research Labs", "Athletic Facilities"],
-    applicationDeadline: "February 1, 2025"
-  }
-];
-
-const locations = ["All", "California", "Massachusetts", "Pennsylvania", "Georgia", "Michigan"];
-const types = ["All", "Public", "Private"];
+import { useColleges } from "@/hooks/useColleges";
+import { useFavorites } from "@/hooks/useFavorites";
 
 export default function Colleges() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("All");
-  const [selectedType, setSelectedType] = useState("All");
+  const [selectedState, setSelectedState] = useState("All");
   const [sortBy, setSortBy] = useState("rating");
-  const [savedColleges, setSavedColleges] = useState<number[]>([]);
-  const [compareList, setCompareList] = useState<number[]>([]);
+  
+  const { colleges, loading } = useColleges();
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
-  const toggleSave = (id: number) => {
-    if (savedColleges.includes(id)) {
-      setSavedColleges(savedColleges.filter(cid => cid !== id));
-      toast.success("Removed from saved colleges");
+  const toggleFavorite = async (itemId: string) => {
+    if (isFavorite('college', itemId)) {
+      await removeFavorite('college', itemId);
     } else {
-      setSavedColleges([...savedColleges, id]);
-      toast.success("Saved to your profile");
+      await addFavorite('college', itemId);
     }
   };
 
-  const toggleCompare = (id: number) => {
-    if (compareList.includes(id)) {
-      setCompareList(compareList.filter(cid => cid !== id));
-    } else if (compareList.length < 3) {
-      setCompareList([...compareList, id]);
-      toast.success("Added to comparison");
-    } else {
-      toast.error("Maximum 3 colleges can be compared");
-    }
-  };
-
-  const filteredColleges = colleges
-    .filter(college => {
-      const matchesSearch = college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           college.location.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesLocation = selectedLocation === "All" || college.location.includes(selectedLocation);
-      const matchesType = selectedType === "All" || college.type === selectedType;
-      return matchesSearch && matchesLocation && matchesType;
-    })
-    .sort((a, b) => {
-      switch(sortBy) {
-        case "rating": return b.rating - a.rating;
-        case "tuition-low": return parseInt(a.tuition.replace(/[$,]/g, '')) - parseInt(b.tuition.replace(/[$,]/g, ''));
-        case "tuition-high": return parseInt(b.tuition.replace(/[$,]/g, '')) - parseInt(a.tuition.replace(/[$,]/g, ''));
-        case "acceptance": return parseFloat(a.acceptance) - parseFloat(b.acceptance);
-        default: return 0;
-      }
+  const states = useMemo(() => {
+    const stateSet = new Set<string>();
+    colleges.forEach(college => {
+      if (college.state) stateSet.add(college.state);
     });
+    return ["All", ...Array.from(stateSet)].sort();
+  }, [colleges]);
+
+  const filteredColleges = useMemo(() => {
+    return colleges
+      .filter(college => {
+        const matchesSearch = college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             college.location?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesState = selectedState === "All" || college.state === selectedState;
+        return matchesSearch && matchesState;
+      })
+      .sort((a, b) => {
+        switch(sortBy) {
+          case "rating": return (b.rating || 0) - (a.rating || 0);
+          case "fees-low": return (a.fees || 0) - (b.fees || 0);
+          case "fees-high": return (b.fees || 0) - (a.fees || 0);
+          default: return 0;
+        }
+      });
+  }, [colleges, searchTerm, selectedState, sortBy]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">College Finder</h1>
+        <div className="mb-8 animate-fade-up">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            College Finder
+          </h1>
           <p className="text-muted-foreground">
-            Discover colleges that align with your career goals and preferences
+            Discover real colleges filtered by state with verified information
           </p>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-6 space-y-4">
+        <div className="mb-6 space-y-4 animate-fade-up" style={{ animationDelay: '0.1s', animationFillMode: 'backwards' }}>
           <div className="grid md:grid-cols-4 gap-4">
             <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -191,13 +79,13 @@ export default function Colleges() {
                 className="pl-10"
               />
             </div>
-            <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+            <Select value={selectedState} onValueChange={setSelectedState}>
               <SelectTrigger>
-                <SelectValue placeholder="Location" />
+                <SelectValue placeholder="State" />
               </SelectTrigger>
               <SelectContent>
-                {locations.map(loc => (
-                  <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                {states.map(state => (
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -207,238 +95,169 @@ export default function Colleges() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="rating">Rating</SelectItem>
-                <SelectItem value="tuition-low">Tuition (Low to High)</SelectItem>
-                <SelectItem value="tuition-high">Tuition (High to Low)</SelectItem>
-                <SelectItem value="acceptance">Acceptance Rate</SelectItem>
+                <SelectItem value="fees-low">Fees (Low to High)</SelectItem>
+                <SelectItem value="fees-high">Fees (High to Low)</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          {/* Type Filter */}
-          <Tabs value={selectedType} onValueChange={setSelectedType}>
-            <TabsList>
-              {types.map(type => (
-                <TabsTrigger key={type} value={type}>{type}</TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
         </div>
 
-        {/* Compare Bar */}
-        {compareList.length > 0 && (
-          <Card className="mb-6 bg-primary/5 border-primary">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">
-                  {compareList.length} college{compareList.length !== 1 ? 's' : ''} selected for comparison
-                </p>
-                <div className="flex gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button disabled={compareList.length < 2}>
-                        Compare Now
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>College Comparison</DialogTitle>
-                        <DialogDescription>Compare key metrics across selected colleges</DialogDescription>
-                      </DialogHeader>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left p-2">Metric</th>
-                              {compareList.map(id => {
-                                const college = colleges.find(c => c.id === id);
-                                return <th key={id} className="text-left p-2">{college?.shortName}</th>;
-                              })}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium">Rating</td>
-                              {compareList.map(id => {
-                                const college = colleges.find(c => c.id === id);
-                                return <td key={id} className="p-2">{college?.rating} ★</td>;
-                              })}
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium">Tuition</td>
-                              {compareList.map(id => {
-                                const college = colleges.find(c => c.id === id);
-                                return <td key={id} className="p-2">{college?.tuition}</td>;
-                              })}
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium">Acceptance Rate</td>
-                              {compareList.map(id => {
-                                const college = colleges.find(c => c.id === id);
-                                return <td key={id} className="p-2">{college?.acceptance}</td>;
-                              })}
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium">Students</td>
-                              {compareList.map(id => {
-                                const college = colleges.find(c => c.id === id);
-                                return <td key={id} className="p-2">{college?.students}</td>;
-                              })}
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium">Programs</td>
-                              {compareList.map(id => {
-                                const college = colleges.find(c => c.id === id);
-                                return <td key={id} className="p-2">{college?.programs}</td>;
-                              })}
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="outline" onClick={() => setCompareList([])}>
-                    Clear
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Results Count */}
-        <div className="mb-4">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredColleges.length} college{filteredColleges.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* College Cards */}
-        <div className="space-y-4">
-          {filteredColleges.map(college => (
-            <Card key={college.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6">
-                <div className="grid md:grid-cols-4 gap-6">
-                  {/* Main Info */}
-                  <div className="md:col-span-2">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-2xl font-bold">{college.name}</h3>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {college.location}
-                          </div>
-                          <Badge variant="secondary">{college.type}</Badge>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleSave(college.id)}
-                      >
-                        <Heart
-                          className={`h-5 w-5 ${savedColleges.includes(college.id) ? 'fill-red-500 text-red-500' : ''}`}
-                        />
-                      </Button>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-3">{college.description}</p>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="font-medium">{college.rating}</span>
-                      <span className="text-sm text-muted-foreground">Rating</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{college.tuition}</span>
-                      <span className="text-sm text-muted-foreground">/year</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{college.students}</span>
-                      <span className="text-sm text-muted-foreground">students</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{college.programs}</span>
-                      <span className="text-sm text-muted-foreground">programs</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2">
-                    <Badge className="justify-center">Cutoff: {college.cutoff}</Badge>
-                    <Badge variant="outline" className="justify-center">
-                      Acceptance: {college.acceptance}
-                    </Badge>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button className="w-full">View Details</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle className="text-2xl">{college.name}</DialogTitle>
-                          <DialogDescription className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            {college.location}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <p>{college.description}</p>
-                          <div>
-                            <h4 className="font-semibold mb-2">Popular Courses</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {college.courses.map((course, idx) => (
-                                <Badge key={idx} variant="secondary">{course}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold mb-2">Facilities</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {college.facilities.map((facility, idx) => (
-                                <Badge key={idx} variant="outline">{facility}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>Application Deadline: {college.applicationDeadline}</span>
-                          </div>
-                          <div className="flex gap-2 pt-4">
-                            <Button className="flex-1">Apply Now</Button>
-                            <Button
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => toggleSave(college.id)}
-                            >
-                              {savedColleges.includes(college.id) ? 'Saved' : 'Save'}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Button
-                      variant="outline"
-                      onClick={() => toggleCompare(college.id)}
-                      disabled={compareList.length >= 3 && !compareList.includes(college.id)}
-                    >
-                      {compareList.includes(college.id) ? 'Remove' : 'Compare'}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredColleges.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No colleges match your search criteria</p>
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="pt-6">
+                  <Skeleton className="h-32 w-full" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        ) : (
+          <>
+            <div className="mb-4 animate-fade-up" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredColleges.length} college{filteredColleges.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {filteredColleges.map((college, idx) => (
+                <Card 
+                  key={college.id} 
+                  className="hover:shadow-xl hover:border-primary/40 transition-all duration-300 animate-fade-up group"
+                  style={{ animationDelay: `${idx * 0.1}s`, animationFillMode: 'backwards' }}
+                >
+                  <CardContent className="pt-6">
+                    <div className="grid md:grid-cols-4 gap-6">
+                      <div className="md:col-span-2">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="text-2xl font-bold group-hover:text-primary transition-colors">{college.name}</h3>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                {college.location}, {college.state}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleFavorite(college.id)}
+                          >
+                            <Heart
+                              className={`h-5 w-5 transition-colors ${isFavorite('college', college.id) ? 'fill-red-500 text-red-500' : ''}`}
+                            />
+                          </Button>
+                        </div>
+                        {college.description && (
+                          <p className="text-sm text-muted-foreground mt-3">{college.description}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {college.rating && (
+                          <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-yellow-500" />
+                            <span className="font-medium">{college.rating}</span>
+                            <span className="text-sm text-muted-foreground">Rating</span>
+                          </div>
+                        )}
+                        {college.fees && (
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-accent" />
+                            <span className="font-medium">₹{college.fees.toLocaleString()}</span>
+                            <span className="text-sm text-muted-foreground">/year</span>
+                          </div>
+                        )}
+                        {college.courses_offered && college.courses_offered.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{college.courses_offered.length}</span>
+                            <span className="text-sm text-muted-foreground">courses</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button className="w-full hover:scale-105 transition-transform bg-gradient-to-r from-primary to-accent">
+                              View Details
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle className="text-2xl">{college.name}</DialogTitle>
+                              <DialogDescription className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                {college.location}, {college.state}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {college.description && (
+                                <p className="text-muted-foreground">{college.description}</p>
+                              )}
+                              
+                              {college.courses_offered && college.courses_offered.length > 0 && (
+                                <div>
+                                  <h4 className="font-semibold mb-2">Courses Offered</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {college.courses_offered.map((course: string, idx: number) => (
+                                      <Badge key={idx} variant="secondary">{course}</Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {college.cutoff_scores && (
+                                <div>
+                                  <h4 className="font-semibold mb-2">Cutoff Information</h4>
+                                  <pre className="text-sm bg-muted p-3 rounded">{JSON.stringify(college.cutoff_scores, null, 2)}</pre>
+                                </div>
+                              )}
+
+                              {college.contact_info && (
+                                <div>
+                                  <h4 className="font-semibold mb-2">Contact</h4>
+                                  <p className="text-sm text-muted-foreground">{college.contact_info}</p>
+                                </div>
+                              )}
+
+                              <div className="flex gap-2 pt-4">
+                                {college.website && (
+                                  <Button className="flex-1 bg-gradient-to-r from-primary to-accent hover:shadow-lg" asChild>
+                                    <a href={college.website} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="h-4 w-4 mr-2" />
+                                      Visit Website
+                                    </a>
+                                  </Button>
+                                )}
+                                {college.admission_link && (
+                                  <Button variant="outline" className="flex-1" asChild>
+                                    <a href={college.admission_link} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="h-4 w-4 mr-2" />
+                                      Apply Now
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {filteredColleges.length === 0 && !loading && (
+              <div className="text-center py-12 animate-fade-in">
+                <p className="text-muted-foreground">No colleges match your search criteria</p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
