@@ -108,15 +108,20 @@ export type Database = {
       colleges: {
         Row: {
           admission_link: string | null
+          affiliation: string | null
+          college_type: string | null
           contact_info: string | null
           courses_offered: string[] | null
           created_at: string
           cutoff_scores: Json | null
           description: string | null
           district: string | null
+          eligibility_criteria: string | null
+          established_year: number | null
           fees: number | null
           id: string
           location: string
+          naac_grade: string | null
           name: string
           rating: number | null
           state: string | null
@@ -125,15 +130,20 @@ export type Database = {
         }
         Insert: {
           admission_link?: string | null
+          affiliation?: string | null
+          college_type?: string | null
           contact_info?: string | null
           courses_offered?: string[] | null
           created_at?: string
           cutoff_scores?: Json | null
           description?: string | null
           district?: string | null
+          eligibility_criteria?: string | null
+          established_year?: number | null
           fees?: number | null
           id?: string
           location: string
+          naac_grade?: string | null
           name: string
           rating?: number | null
           state?: string | null
@@ -142,15 +152,20 @@ export type Database = {
         }
         Update: {
           admission_link?: string | null
+          affiliation?: string | null
+          college_type?: string | null
           contact_info?: string | null
           courses_offered?: string[] | null
           created_at?: string
           cutoff_scores?: Json | null
           description?: string | null
           district?: string | null
+          eligibility_criteria?: string | null
+          established_year?: number | null
           fees?: number | null
           id?: string
           location?: string
+          naac_grade?: string | null
           name?: string
           rating?: number | null
           state?: string | null
