@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BookOpen, 
   TrendingUp, 
@@ -13,7 +14,16 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
-  Heart
+  Heart,
+  Briefcase,
+  GraduationCap,
+  DollarSign,
+  MapPin,
+  ExternalLink,
+  Star,
+  Building2,
+  Calendar,
+  Youtube
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -21,15 +31,92 @@ import AnalyticsCard from "@/components/AnalyticsCard";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useVerifiedJobs } from "@/hooks/useVerifiedJobs";
+import { useColleges } from "@/hooks/useColleges";
+import { useVerifiedScholarships } from "@/hooks/useVerifiedScholarships";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { analytics, loading } = useAnalytics();
   const [profile, setProfile] = useState<any>(null);
+  const [latestRecommendations, setLatestRecommendations] = useState<any>(null);
+  const { jobs, loading: jobsLoading } = useVerifiedJobs();
+  const { colleges, loading: collegesLoading } = useColleges();
+  const { scholarships, loading: scholarshipsLoading } = useVerifiedScholarships();
 
   useEffect(() => {
     loadProfile();
+    loadLatestRecommendations();
   }, [user]);
+
+  // Real-time updates for jobs
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-jobs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'verified_jobs'
+        },
+        () => {
+          console.log('Jobs updated, refreshing...');
+          window.location.reload();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Real-time updates for colleges
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-colleges-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'colleges'
+        },
+        () => {
+          console.log('Colleges updated, refreshing...');
+          window.location.reload();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Real-time updates for scholarships
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-scholarships-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'verified_scholarships'
+        },
+        () => {
+          console.log('Scholarships updated, refreshing...');
+          window.location.reload();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -41,6 +128,30 @@ const Dashboard = () => {
       .single();
     
     setProfile(data);
+  };
+
+  const loadLatestRecommendations = async () => {
+    if (!user) return;
+
+    // Get latest quiz session with career recommendations
+    const { data: session } = await supabase
+      .from('quiz_sessions')
+      .select(`
+        *,
+        career_recommendations:career_recommendations(
+          *,
+          careers(*)
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('completed', true)
+      .order('completed_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (session) {
+      setLatestRecommendations(session.career_recommendations);
+    }
   };
 
   const userName = profile?.full_name || user?.email?.split('@')[0] || "Student";
@@ -187,7 +298,7 @@ const Dashboard = () => {
           {/* Recent Activity & Progress */}
           <div className="space-y-6">
             {/* Profile Completion */}
-            <Card className="animate-fade-up border-accent/20 shadow-lg hover:shadow-xl transition-shadow" style={{ animationDelay: '0.6s', animationFillMode: 'backwards' }}>
+            <Card className="animate-fade-up border-accent/20 shadow-lg hover:shadow-xl transition-shadow" style={{ animationDelay: '0.7s', animationFillMode: 'backwards' }}>
               <CardHeader className="bg-gradient-to-r from-accent/5 to-primary/5">
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-accent" />
@@ -214,7 +325,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Recent Activity */}
-            <Card className="animate-fade-up border-primary/20 shadow-lg" style={{ animationDelay: '0.7s', animationFillMode: 'backwards' }}>
+            <Card className="animate-fade-up border-primary/20 shadow-lg" style={{ animationDelay: '0.8s', animationFillMode: 'backwards' }}>
               <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary animate-pulse" />
