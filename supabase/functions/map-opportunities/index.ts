@@ -290,6 +290,103 @@ function rankColleges(colleges: any[], profile: AptitudeProfile) {
   }).sort((a, b) => b.confidence_score - a.confidence_score).slice(0, 15); // Top 15 colleges
 }
 
+// Helper function to identify career type from job data
+function identifyCareerType(job: any): string {
+  const role = job.role.toLowerCase();
+  const skills = (job.required_skills || []).join(' ').toLowerCase();
+  const combined = role + ' ' + skills;
+
+  if (combined.match(/software|developer|programmer|coding|tech|engineer|it|devops|backend|frontend|data engineer/)) {
+    return 'Technical';
+  } else if (combined.match(/design|creative|ui|ux|graphic|content|marketing|media|artist/)) {
+    return 'Creative';
+  } else if (combined.match(/manager|management|director|lead|executive|strategy|operations|business/)) {
+    return 'Management';
+  } else if (combined.match(/sales|marketing|business development|customer|client/)) {
+    return 'Sales & Marketing';
+  } else if (combined.match(/finance|accounting|analyst|economics|banking|investment/)) {
+    return 'Finance & Analytics';
+  } else if (combined.match(/hr|human resource|recruitment|talent/)) {
+    return 'Human Resources';
+  } else if (combined.match(/teacher|education|training|instructor|academic/)) {
+    return 'Education';
+  } else if (combined.match(/health|medical|doctor|nurse|pharma|clinical/)) {
+    return 'Healthcare';
+  } else if (combined.match(/legal|law|compliance|regulatory/)) {
+    return 'Legal';
+  } else if (combined.match(/research|scientist|innovation|r&d/)) {
+    return 'Research';
+  }
+  
+  return 'General';
+}
+
+// Match career type to user's aptitude profile
+function matchCareerTypeToProfile(careerType: string, profile: AptitudeProfile): { score: number, reason: string } {
+  const skills = profile.skills;
+  
+  switch (careerType) {
+    case 'Technical':
+      if (skills.technical >= 75 && skills.logical >= 70) {
+        return { score: 30, reason: `High technical (${skills.technical}%) and logical (${skills.logical}%) skills → Suitable for ${careerType} role` };
+      } else if (skills.technical >= 65) {
+        return { score: 20, reason: `Strong technical aptitude (${skills.technical}%) → Good match for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    case 'Creative':
+      if (skills.creative >= 75) {
+        return { score: 30, reason: `Excellent creative aptitude (${skills.creative}%) → Highly suitable for ${careerType} role` };
+      } else if (skills.creative >= 65) {
+        return { score: 20, reason: `Strong creative skills (${skills.creative}%) → Good match for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    case 'Management':
+      if (skills.interpersonal >= 70 && skills.logical >= 65) {
+        return { score: 30, reason: `High interpersonal (${skills.interpersonal}%) and logical (${skills.logical}%) skills → Suitable for ${careerType}` };
+      } else if (skills.interpersonal >= 65) {
+        return { score: 20, reason: `Strong interpersonal skills (${skills.interpersonal}%) → Good for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    case 'Sales & Marketing':
+      if (skills.interpersonal >= 75 && skills.verbal >= 70) {
+        return { score: 30, reason: `Excellent interpersonal (${skills.interpersonal}%) and verbal (${skills.verbal}%) skills → Ideal for ${careerType}` };
+      } else if (skills.interpersonal >= 65) {
+        return { score: 20, reason: `Strong interpersonal aptitude (${skills.interpersonal}%) → Good match for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    case 'Finance & Analytics':
+      if (skills.quantitative >= 75 && skills.logical >= 70) {
+        return { score: 30, reason: `High quantitative (${skills.quantitative}%) and logical (${skills.logical}%) skills → Highly suitable for ${careerType}` };
+      } else if (skills.quantitative >= 65) {
+        return { score: 20, reason: `Strong quantitative aptitude (${skills.quantitative}%) → Good for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    case 'Education':
+      if (skills.verbal >= 70 && skills.interpersonal >= 70) {
+        return { score: 30, reason: `Strong verbal (${skills.verbal}%) and interpersonal (${skills.interpersonal}%) skills → Suitable for ${careerType}` };
+      } else if (skills.interpersonal >= 65) {
+        return { score: 20, reason: `Good interpersonal skills (${skills.interpersonal}%) → Match for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    case 'Research':
+      if (skills.logical >= 75 && skills.quantitative >= 70) {
+        return { score: 30, reason: `Excellent logical (${skills.logical}%) and quantitative (${skills.quantitative}%) skills → Ideal for ${careerType}` };
+      } else if (skills.logical >= 65) {
+        return { score: 20, reason: `Strong logical reasoning (${skills.logical}%) → Good for ${careerType}` };
+      }
+      return { score: 10, reason: `${careerType} role available` };
+      
+    default:
+      return { score: 5, reason: `${careerType} opportunity` };
+  }
+}
+
 function rankScholarships(scholarships: any[], profile: AptitudeProfile) {
   return scholarships.map(scholarship => {
     let confidence_score = 50;
@@ -393,18 +490,27 @@ function rankScholarships(scholarships: any[], profile: AptitudeProfile) {
 function rankJobs(jobs: any[], profile: AptitudeProfile) {
   return jobs.map(job => {
     let confidence_score = 30;
-    let reason = 'Recent posting (last 7 days)';
-    const matchReasons: string[] = [];
+    const matchReasons: string[] = ['Recent posting (last 7 days)'];
+
+    // Identify career type based on job role and requirements
+    const careerType = identifyCareerType(job);
+    
+    // Career type matching with aptitude profile
+    const careerTypeScore = matchCareerTypeToProfile(careerType, profile);
+    confidence_score += careerTypeScore.score;
+    if (careerTypeScore.reason) {
+      matchReasons.push(careerTypeScore.reason);
+    }
 
     // Comprehensive Skills match with weighted scoring
     let skillMatch = 0;
     const skillKeywords: Record<string, string[]> = {
-      technical: ['technical', 'programming', 'coding', 'software', 'developer', 'engineer', 'IT'],
-      quantitative: ['quantitative', 'analytical', 'data', 'statistics', 'mathematics', 'analysis'],
-      interpersonal: ['communication', 'interpersonal', 'teamwork', 'leadership', 'presentation', 'collaboration'],
-      creative: ['creative', 'design', 'innovation', 'problem-solving', 'ideation'],
-      logical: ['logical', 'reasoning', 'systematic', 'structured'],
-      verbal: ['verbal', 'writing', 'documentation', 'reporting']
+      technical: ['technical', 'programming', 'coding', 'software', 'developer', 'engineer', 'IT', 'tech', 'backend', 'frontend', 'devops'],
+      quantitative: ['quantitative', 'analytical', 'data', 'statistics', 'mathematics', 'analysis', 'finance', 'accounting', 'analyst'],
+      interpersonal: ['communication', 'interpersonal', 'teamwork', 'leadership', 'presentation', 'collaboration', 'sales', 'customer', 'hr', 'management'],
+      creative: ['creative', 'design', 'innovation', 'problem-solving', 'ideation', 'ui', 'ux', 'graphic', 'content', 'marketing'],
+      logical: ['logical', 'reasoning', 'systematic', 'structured', 'planning', 'strategy'],
+      verbal: ['verbal', 'writing', 'documentation', 'reporting', 'communication', 'editor', 'content']
     };
 
     if (job.required_skills && job.required_skills.length > 0) {
@@ -465,15 +571,13 @@ function rankJobs(jobs: any[], profile: AptitudeProfile) {
       matchReasons.push(`Posted ${daysSincePosting} days ago`);
     }
 
-    // Build comprehensive reason
-    if (matchReasons.length > 0) {
-      reason = matchReasons.join(' • ');
-    }
+    // Build comprehensive reason from all match reasons
+    const finalReason = matchReasons.join(' • ');
 
     return {
       ...job,
       confidence_score: Math.min(100, confidence_score),
-      match_reason: reason,
+      match_reason: finalReason,
       days_since_posting: daysSincePosting
     };
   }).sort((a, b) => {
@@ -485,36 +589,69 @@ function rankJobs(jobs: any[], profile: AptitudeProfile) {
   }).slice(0, 10); // Return top 10 matches
 }
 
-function generateExplanations(profile: AptitudeProfile, recommendations: any) {
-  const explanations = [];
-
-  // Overall profile summary
-  const topSkills = Object.entries(profile.skills)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, 3)
-    .map(([skill]) => skill);
-
-  explanations.push(
-    `Your top skills are ${topSkills.join(', ')}. We've matched opportunities based on these strengths.`
-  );
-
-  if (recommendations.colleges.length > 0) {
-    explanations.push(
-      `Found ${recommendations.colleges.length} colleges in your preferred locations with programs matching your aptitude.`
-    );
+function generateExplanations(profile: AptitudeProfile, recommendations: any): string[] {
+  const explanations: string[] = [];
+  
+  // Identify top skills and career types
+  const skills = profile.skills;
+  const topSkills = Object.entries(skills)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  
+  const primaryCareerTypes: string[] = [];
+  
+  // Determine recommended career types based on aptitude
+  if (skills.technical >= 70 && skills.logical >= 65) {
+    primaryCareerTypes.push('Technical/Engineering');
   }
-
-  if (recommendations.scholarships.length > 0) {
-    explanations.push(
-      `${recommendations.scholarships.length} scholarships available. Apply early as deadlines approach.`
-    );
+  if (skills.creative >= 70) {
+    primaryCareerTypes.push('Creative/Design');
   }
-
+  if (skills.interpersonal >= 70 && skills.verbal >= 65) {
+    primaryCareerTypes.push('Management/Leadership');
+  }
+  if (skills.quantitative >= 70) {
+    primaryCareerTypes.push('Finance/Analytics');
+  }
+  
+  if (primaryCareerTypes.length > 0) {
+    explanations.push(`🎯 Recommended career types: ${primaryCareerTypes.join(', ')}`);
+  }
+  
+  explanations.push(`📊 Your top aptitude areas: ${topSkills.map(([skill, score]) => `${skill} (${score}%)`).join(', ')}`);
+  
+  // Job recommendations with career type insights
   if (recommendations.jobs.length > 0) {
-    explanations.push(
-      `${recommendations.jobs.length} recent job postings match your skill profile. All posted within last 7 days.`
-    );
+    const jobsByType: Record<string, number> = {};
+    recommendations.jobs.forEach((job: any) => {
+      const type = identifyCareerType(job);
+      jobsByType[type] = (jobsByType[type] || 0) + 1;
+    });
+    const topJobTypes = Object.entries(jobsByType)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([type, count]) => `${count} ${type}`)
+      .join(', ');
+    explanations.push(`💼 ${recommendations.jobs.length} recent jobs (last 7 days): ${topJobTypes} roles`);
   }
-
+  
+  // College recommendations with location
+  if (recommendations.colleges.length > 0) {
+    const locationMatches = recommendations.colleges.filter((c: any) => 
+      profile.preferred_locations.includes(c.state)
+    ).length;
+    const states = profile.preferred_locations.join(', ');
+    explanations.push(`🎓 ${locationMatches} colleges in ${states} matching your profile`);
+  }
+  
+  // Scholarship info with urgency
+  if (recommendations.scholarships.length > 0) {
+    const urgentCount = recommendations.scholarships.filter((s: any) => s.days_until_deadline <= 7).length;
+    if (urgentCount > 0) {
+      explanations.push(`⏰ ${urgentCount} urgent scholarship(s) - apply immediately!`);
+    }
+    explanations.push(`💰 ${recommendations.scholarships.length} scholarships for ${profile.academic_level} level`);
+  }
+  
   return explanations;
 }
