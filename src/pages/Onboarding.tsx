@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Select,
@@ -32,7 +34,9 @@ const Onboarding = () => {
     bio: "",
     interests: [] as string[],
     goals: [] as string[],
-    profilePicture: ""
+    profilePicture: "",
+    preferredState: "",
+    preferredDistrict: ""
   });
 
   const interests = [
@@ -84,9 +88,39 @@ const Onboarding = () => {
     navigate("/dashboard");
   };
 
-  const handleComplete = () => {
-    toast.success("Profile setup complete!");
-    navigate("/dashboard");
+  const handleComplete = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please log in to complete onboarding");
+        navigate("/login");
+        return;
+      }
+
+      // Update user profile with all collected data
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.fullName,
+          age: formData.age ? parseInt(formData.age) : null,
+          education_level: formData.educationLevel,
+          class_level: formData.classLevel,
+          study_area: formData.studyArea,
+          interests: formData.interests,
+          goals: formData.goals.join(', '), // Store as comma-separated string
+          preferred_state: formData.preferredState,
+          preferred_district: formData.preferredDistrict,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success("Profile setup complete!");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error("Failed to save profile. Please try again.");
+    }
   };
 
   const progress = (step / totalSteps) * 100;
@@ -238,7 +272,7 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 3: Interests */}
+          {/* Step 3: Interests & Location */}
           {step === 3 && (
             <div className="space-y-6">
               <div>
@@ -257,6 +291,49 @@ const Onboarding = () => {
                     {interest}
                   </Badge>
                 ))}
+              </div>
+
+              <Separator className="my-6" />
+
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Where do you prefer to study?</h3>
+                <p className="text-muted-foreground">Help us find nearby opportunities</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="preferredState">Preferred State</Label>
+                  <Select
+                    value={formData.preferredState}
+                    onValueChange={(value) => setFormData({ ...formData, preferredState: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Uttar Pradesh">Uttar Pradesh</SelectItem>
+                      <SelectItem value="Maharashtra">Maharashtra</SelectItem>
+                      <SelectItem value="Delhi">Delhi</SelectItem>
+                      <SelectItem value="Karnataka">Karnataka</SelectItem>
+                      <SelectItem value="Tamil Nadu">Tamil Nadu</SelectItem>
+                      <SelectItem value="Gujarat">Gujarat</SelectItem>
+                      <SelectItem value="Rajasthan">Rajasthan</SelectItem>
+                      <SelectItem value="West Bengal">West Bengal</SelectItem>
+                      <SelectItem value="Telangana">Telangana</SelectItem>
+                      <SelectItem value="Any">Any State</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="preferredDistrict">Preferred District (Optional)</Label>
+                  <Input
+                    id="preferredDistrict"
+                    placeholder="Enter district name"
+                    value={formData.preferredDistrict}
+                    onChange={(e) => setFormData({ ...formData, preferredDistrict: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
           )}

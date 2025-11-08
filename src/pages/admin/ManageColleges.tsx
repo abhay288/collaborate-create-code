@@ -29,17 +29,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface College {
   id: string;
-  name: string;
-  location: string;
-  district: string | null;
+  college_name: string;
+  s_no: number | null;
   state: string | null;
+  district: string | null;
+  college_type: string | null;
   website: string | null;
+  affiliation: string | null;
+  eligibility_criteria: string | null;
+  naac_grade: string | null;
   description: string | null;
   fees: number | null;
   rating: number | null;
   courses_offered: string[] | null;
   contact_info: string | null;
   admission_link: string | null;
+  location: string | null;
+  cutoff_scores: any | null;
+  established_year: number | null;
 }
 
 const UP_DISTRICTS = [
@@ -64,11 +71,15 @@ const ManageColleges = () => {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    name: '',
+    college_name: '',
     location: '',
     district: '',
     state: 'Uttar Pradesh',
+    college_type: '',
     website: '',
+    affiliation: '',
+    eligibility_criteria: '',
+    naac_grade: '',
     description: '',
     fees: '',
     rating: '',
@@ -104,11 +115,15 @@ const ManageColleges = () => {
     e.preventDefault();
 
     const collegeData = {
-      name: formData.name,
+      college_name: formData.college_name,
       location: formData.location,
       district: formData.district,
       state: formData.state,
+      college_type: formData.college_type || null,
       website: formData.website || null,
+      affiliation: formData.affiliation || null,
+      eligibility_criteria: formData.eligibility_criteria || null,
+      naac_grade: formData.naac_grade || null,
       description: formData.description || null,
       fees: formData.fees ? parseFloat(formData.fees) : null,
       rating: formData.rating ? parseFloat(formData.rating) : null,
@@ -156,11 +171,15 @@ const ManageColleges = () => {
   const handleEdit = (college: College) => {
     setEditingCollege(college);
     setFormData({
-      name: college.name,
-      location: college.location,
+      college_name: college.college_name,
+      location: college.location || '',
       district: college.district || '',
       state: college.state || 'Uttar Pradesh',
+      college_type: college.college_type || '',
       website: college.website || '',
+      affiliation: college.affiliation || '',
+      eligibility_criteria: college.eligibility_criteria || '',
+      naac_grade: college.naac_grade || '',
       description: college.description || '',
       fees: college.fees?.toString() || '',
       rating: college.rating?.toString() || '',
@@ -193,11 +212,15 @@ const ManageColleges = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '',
+      college_name: '',
       location: '',
       district: '',
       state: 'Uttar Pradesh',
+      college_type: '',
       website: '',
+      affiliation: '',
+      eligibility_criteria: '',
+      naac_grade: '',
       description: '',
       fees: '',
       rating: '',
@@ -240,11 +263,11 @@ const ManageColleges = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <Label htmlFor="name">College Name *</Label>
+                    <Label htmlFor="college_name">College Name *</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      id="college_name"
+                      value={formData.college_name}
+                      onChange={(e) => setFormData({ ...formData, college_name: e.target.value })}
                       required
                     />
                   </div>
@@ -375,7 +398,7 @@ const ManageColleges = () => {
                 <TableBody>
                   {colleges.map((college) => (
                     <TableRow key={college.id}>
-                      <TableCell className="font-medium">{college.name}</TableCell>
+                      <TableCell className="font-medium">{college.college_name}</TableCell>
                       <TableCell>{college.district || 'N/A'}</TableCell>
                       <TableCell>{college.location}</TableCell>
                       <TableCell>{college.fees ? `₹${college.fees.toLocaleString()}` : 'N/A'}</TableCell>

@@ -50,6 +50,16 @@ export default function Quiz() {
     return () => clearInterval(timer);
   }, [isPaused]);
 
+  // Shuffle array utility function
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   // Load quiz questions from database based on user profile
   useEffect(() => {
     const loadQuestions = async () => {
@@ -82,13 +92,44 @@ export default function Quiz() {
 
         if (error) throw error;
 
+        // If no questions found, generate new ones using AI
         if (!data || data.length === 0) {
-          toast.error('No quiz questions available for your profile. Please contact support.');
-          navigate('/dashboard');
-          return;
-        }
+          toast.info('Generating personalized questions for you...');
+          
+          const { data: generatedData, error: genError } = await supabase.functions.invoke(
+            'generate-quiz-questions',
+            {
+              body: { classLevel, studyArea }
+            }
+          );
 
-        setQuizQuestions(data);
+          if (genError) {
+            console.error('Error generating questions:', genError);
+            toast.error('Failed to generate quiz questions');
+            navigate('/dashboard');
+            return;
+          }
+
+          if (generatedData?.questions && generatedData.questions.length > 0) {
+            // Shuffle questions and their options
+            const shuffledQuestions = shuffleArray(generatedData.questions).map((q: any) => ({
+              ...q,
+              options: shuffleArray(Array.isArray(q.options) ? q.options : q.options?.options || [])
+            }));
+            setQuizQuestions(shuffledQuestions);
+            toast.success('Personalized quiz ready!');
+          } else {
+            toast.error('No questions generated. Please try again.');
+            navigate('/dashboard');
+          }
+        } else {
+          // Shuffle questions and their options
+          const shuffledQuestions = shuffleArray(data).map((q: any) => ({
+            ...q,
+            options: shuffleArray(Array.isArray(q.options) ? q.options : q.options?.options || [])
+          }));
+          setQuizQuestions(shuffledQuestions);
+        }
       } catch (error) {
         console.error('Error loading questions:', error);
         toast.error('Failed to load quiz questions');

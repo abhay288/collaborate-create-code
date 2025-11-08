@@ -109,6 +109,7 @@ export type Database = {
         Row: {
           admission_link: string | null
           affiliation: string | null
+          college_name: string
           college_type: string | null
           contact_info: string | null
           courses_offered: string[] | null
@@ -120,10 +121,10 @@ export type Database = {
           established_year: number | null
           fees: number | null
           id: string
-          location: string
+          location: string | null
           naac_grade: string | null
-          name: string
           rating: number | null
+          s_no: number | null
           state: string | null
           updated_at: string
           website: string | null
@@ -131,6 +132,7 @@ export type Database = {
         Insert: {
           admission_link?: string | null
           affiliation?: string | null
+          college_name: string
           college_type?: string | null
           contact_info?: string | null
           courses_offered?: string[] | null
@@ -142,10 +144,10 @@ export type Database = {
           established_year?: number | null
           fees?: number | null
           id?: string
-          location: string
+          location?: string | null
           naac_grade?: string | null
-          name: string
           rating?: number | null
+          s_no?: number | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -153,6 +155,7 @@ export type Database = {
         Update: {
           admission_link?: string | null
           affiliation?: string | null
+          college_name?: string
           college_type?: string | null
           contact_info?: string | null
           courses_offered?: string[] | null
@@ -164,10 +167,10 @@ export type Database = {
           established_year?: number | null
           fees?: number | null
           id?: string
-          location?: string
+          location?: string | null
           naac_grade?: string | null
-          name?: string
           rating?: number | null
+          s_no?: number | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -184,6 +187,8 @@ export type Database = {
           goals: string | null
           id: string
           interests: string[] | null
+          preferred_district: string | null
+          preferred_state: string | null
           profile_picture_url: string | null
           study_area: string | null
           updated_at: string
@@ -197,6 +202,8 @@ export type Database = {
           goals?: string | null
           id: string
           interests?: string[] | null
+          preferred_district?: string | null
+          preferred_state?: string | null
           profile_picture_url?: string | null
           study_area?: string | null
           updated_at?: string
@@ -210,6 +217,8 @@ export type Database = {
           goals?: string | null
           id?: string
           interests?: string[] | null
+          preferred_district?: string | null
+          preferred_state?: string | null
           profile_picture_url?: string | null
           study_area?: string | null
           updated_at?: string
