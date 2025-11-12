@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,23 @@ interface UserProfile {
   interests?: string[];
   location?: { state?: string; district?: string };
   past_scores?: { category: string; score: number }[];
+}
+
+// Map common study area variations to valid values
+function mapStudyArea(studyArea: string): string {
+  const mapping: Record<string, string> = {
+    'other': 'All',
+    'general': 'All',
+    'undecided': 'All',
+    'science': 'Science',
+    'commerce': 'Commerce',
+    'arts': 'Arts',
+    'humanities': 'Arts',
+    'business': 'Commerce'
+  };
+  
+  const lowerArea = studyArea?.toLowerCase() || '';
+  return mapping[lowerArea] || studyArea;
 }
 
 // Deterministic seeding for debugging
@@ -78,9 +96,12 @@ function validateProfile(profile: any): { valid: boolean; error?: { code: string
     return { valid: false, error: { code: ERROR_CODES.INVALID_PROFILE_DATA, message: `Invalid class level. Must be one of: ${validClassLevels.join(', ')}`, field: 'class_level' } };
   }
 
+  // Map study area to valid value before validation
+  profile.study_area = mapStudyArea(profile.study_area);
+  
   const validStudyAreas = ['Science', 'Commerce', 'Arts', 'All'];
   if (!validStudyAreas.includes(profile.study_area)) {
-    return { valid: false, error: { code: ERROR_CODES.INVALID_PROFILE_DATA, message: `Invalid study area. Must be one of: ${validStudyAreas.join(', ')}`, field: 'study_area' } };
+    return { valid: false, error: { code: ERROR_CODES.INVALID_PROFILE_DATA, message: `Invalid study area '${profile.study_area}'. Supported: ${validStudyAreas.join(', ')}. Tip: Use 'All' for undecided/other streams.`, field: 'study_area' } };
   }
 
   return { valid: true };
@@ -112,12 +133,17 @@ async function getQuestionBankFallback(supabaseClient: any, profile: UserProfile
 }
 
 serve(async (req) => {
+  const logger = createLogger('generate-quiz-questions', req);
+  const startTime = Date.now();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const body = await req.json();
+    logger.logRequest('POST', '/generate-quiz-questions', body);
+    
     const profile: UserProfile = body.profile || { 
       userId: body.userId, 
       class_level: body.classLevel, 
@@ -128,10 +154,17 @@ serve(async (req) => {
     };
     const seed = body.seed; // Optional deterministic seed for debugging
     
+    logger.info('Processing quiz generation request', { 
+      userId: profile.userId,
+      class_level: profile.class_level,
+      study_area: profile.study_area,
+      has_seed: !!seed
+    });
+    
     // Validate profile
     const validation = validateProfile(profile);
     if (!validation.valid) {
-      console.error('Profile validation failed:', validation.error);
+      logger.error('Profile validation failed', validation.error, { profile });
       return new Response(
         JSON.stringify({ 
           error: validation.error!.message,
@@ -311,18 +344,22 @@ VALIDATION:
         });
       });
       
-      console.log(`AI generated ${questions.length} questions successfully`);
+      logger.info(`AI generated ${questions.length} questions successfully`);
       
     } catch (aiError) {
-      console.error('AI generation error:', aiError);
-      console.log('Falling back to verified question bank...');
+      logger.error('AI generation failed', aiError, { profile });
+      logger.info('Falling back to verified question bank...');
       
       // FALLBACK: Use verified question bank
       try {
         questions = await getQuestionBankFallback(supabaseClient, profile);
-        console.log('Successfully retrieved questions from fallback bank');
+        logger.info('Successfully retrieved questions from fallback bank', { count: questions.length });
       } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
+        logger.error('Fallback also failed', fallbackError);
+        
+        const duration = Date.now() - startTime;
+        logger.logResponse(500, { error: 'No questions available' }, duration);
+        
         return new Response(
           JSON.stringify({ 
             error: 'Failed to generate or retrieve questions',
@@ -441,7 +478,10 @@ VALIDATION:
       );
     }
 
-    console.log(`Successfully generated and inserted ${insertedQuestions.length} questions`);
+    const duration = Date.now() - startTime;
+    logger.info(`Successfully generated and inserted ${insertedQuestions.length} questions`);
+    logger.logQuizGeneration(profile, { success: true, count: insertedQuestions.length });
+    logger.logResponse(200, { success: true, count: insertedQuestions.length }, duration);
 
     return new Response(
       JSON.stringify({ 
@@ -465,7 +505,10 @@ VALIDATION:
     );
 
   } catch (error) {
-    console.error('Unexpected error in generate-quiz-questions:', error);
+    const duration = Date.now() - startTime;
+    logger.error('Unexpected error in generate-quiz-questions', error);
+    logger.logResponse(500, { error: 'Internal server error' }, duration);
+    
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error occurred',
