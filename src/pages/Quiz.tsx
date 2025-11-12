@@ -160,10 +160,26 @@ export default function Quiz() {
   }, [quizQuestions]);
 
   const handleAnswerSelect = async (optionIndex: number) => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      toast.error('Quiz session not initialized. Please refresh and try again.');
+      return;
+    }
+
+    // Validation: Ensure option is valid
+    if (optionIndex < 0) {
+      toast.error('Please select a valid answer option.');
+      return;
+    }
 
     const question = quizQuestions[currentQuestion];
     const options = Array.isArray(question.options) ? question.options : question.options?.options || [];
+    
+    // Validation: Check if option exists
+    if (optionIndex >= options.length) {
+      toast.error('Invalid answer option selected.');
+      return;
+    }
+
     const newAnswers = { ...answers, [question.id]: optionIndex };
     setAnswers(newAnswers);
 
@@ -178,12 +194,16 @@ export default function Quiz() {
         ? options[optionIndex]?.points || 1
         : 1;
       
-      await saveResponse(
+      const saved = await saveResponse(
         sessionId,
         question.id,
         selectedOptionText,
         pointsEarned
       );
+
+      if (!saved) {
+        throw new Error('Failed to save response');
+      }
 
       const existingIndex = savedResponses.findIndex(r => r.question_id === question.id);
       if (existingIndex >= 0) {
@@ -203,14 +223,25 @@ export default function Quiz() {
           points_earned: pointsEarned
         }]);
       }
-      toast.success('Answer saved', { duration: 1000 });
+      toast.success('Answer saved ✓', { duration: 1000 });
     } catch (error) {
       console.error('Error saving answer:', error);
       toast.error('Failed to save answer. Please try again.');
+      // Revert the local answer state on error
+      const revertedAnswers = { ...answers };
+      delete revertedAnswers[question.id];
+      setAnswers(revertedAnswers);
     }
   };
 
   const handleNext = () => {
+    // Validation: Ensure current question is answered before proceeding
+    const currentQuestionId = quizQuestions[currentQuestion]?.id;
+    if (!currentQuestionId || !(currentQuestionId in answers)) {
+      toast.error('Please answer the current question before proceeding.', { duration: 2000 });
+      return;
+    }
+
     if (currentQuestion < quizQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
@@ -225,14 +256,35 @@ export default function Quiz() {
   };
 
   const handleSubmit = async () => {
+    // Validation: Check all questions are answered
     const unanswered = quizQuestions.filter(q => !(q.id in answers));
     if (unanswered.length > 0) {
-      toast.error(`Please answer all questions (${unanswered.length} remaining)`);
+      const unansweredNumbers = unanswered.map(q => quizQuestions.indexOf(q) + 1).join(', ');
+      toast.error(`Please answer all questions. Missing: Question(s) ${unansweredNumbers}`, { duration: 4000 });
+      
+      // Jump to first unanswered question
+      const firstUnanswered = quizQuestions.findIndex(q => !(q.id in answers));
+      if (firstUnanswered >= 0) {
+        setCurrentQuestion(firstUnanswered);
+      }
       return;
     }
 
-    if (!sessionId || savedResponses.length === 0) {
-      toast.error('No answers saved. Please answer the questions.');
+    // Validation: Ensure session exists
+    if (!sessionId) {
+      toast.error('Quiz session error. Please refresh and try again.');
+      return;
+    }
+
+    // Validation: Ensure responses are saved
+    if (savedResponses.length === 0) {
+      toast.error('No answers saved. Please answer the questions and try again.');
+      return;
+    }
+
+    // Validation: Ensure all answered questions have saved responses
+    if (savedResponses.length !== quizQuestions.length) {
+      toast.error(`Only ${savedResponses.length} of ${quizQuestions.length} answers were saved. Please review your answers.`);
       return;
     }
 
@@ -408,8 +460,9 @@ export default function Quiz() {
             <Button
               onClick={handleNext}
               disabled={selectedAnswer === undefined}
+              className={selectedAnswer === undefined ? 'opacity-50 cursor-not-allowed' : ''}
             >
-              {currentQuestion === quizQuestions.length - 1 ? 'Submit' : 'Next'}
+              {currentQuestion === quizQuestions.length - 1 ? 'Submit Quiz' : 'Next Question'}
               {currentQuestion < quizQuestions.length - 1 && <ChevronRight className="h-4 w-4 ml-2" />}
             </Button>
           </CardFooter>
