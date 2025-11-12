@@ -34,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useVerifiedJobs } from "@/hooks/useVerifiedJobs";
 import { useColleges } from "@/hooks/useColleges";
 import { useVerifiedScholarships } from "@/hooks/useVerifiedScholarships";
+import { FeedbackButtons } from "@/components/FeedbackButtons";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -350,6 +351,205 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Recommendations Section */}
+        <div className="mt-12 space-y-8">
+          <Tabs defaultValue="jobs" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="jobs" className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                Career Opportunities
+              </TabsTrigger>
+              <TabsTrigger value="colleges" className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" />
+                Colleges
+              </TabsTrigger>
+              <TabsTrigger value="scholarships" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Scholarships
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Jobs Tab */}
+            <TabsContent value="jobs" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5" />
+                    Recommended Career Opportunities
+                  </CardTitle>
+                  <CardDescription>
+                    Real verified job opportunities matched to your profile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {jobsLoading ? (
+                    <p className="text-center py-8 text-muted-foreground">Loading opportunities...</p>
+                  ) : jobs.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">No job opportunities available yet</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {jobs.slice(0, 6).map((job) => (
+                        <Card key={job.id} className="hover:shadow-lg transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h3 className="font-semibold text-foreground">{job.role}</h3>
+                                <p className="text-sm text-muted-foreground">{job.company}</p>
+                              </div>
+                              <Badge variant="secondary" className="ml-2">
+                                {Math.round(job.confidence_score)}% match
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              <MapPin className="inline h-3 w-3 mr-1" />
+                              {job.location}
+                            </p>
+                            {job.salary_range && (
+                              <p className="text-sm font-medium text-foreground mb-2">
+                                💰 {job.salary_range}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mb-3">{job.match_reason}</p>
+                            <div className="space-y-2">
+                              <Button asChild size="sm" className="w-full">
+                                <a href={job.apply_url} target="_blank" rel="noopener noreferrer">
+                                  Apply Now
+                                </a>
+                              </Button>
+                              <FeedbackButtons 
+                                recommendationType="job" 
+                                recommendationId={job.id}
+                                showApplied={true}
+                                className="justify-center"
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Colleges Tab */}
+            <TabsContent value="colleges" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5" />
+                    Recommended Colleges
+                  </CardTitle>
+                  <CardDescription>
+                    Top colleges matching your preferences and location
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {collegesLoading ? (
+                    <p className="text-center py-8 text-muted-foreground">Loading colleges...</p>
+                  ) : colleges.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">No colleges available yet</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {colleges.slice(0, 6).map((college) => (
+                        <Card key={college.id} className="hover:shadow-lg transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <h3 className="font-semibold text-foreground">{college.college_name}</h3>
+                              <Badge variant="secondary" className="ml-2">
+                                {Math.round(college.confidence_score)}% match
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-1">{college.course}</p>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              <MapPin className="inline h-3 w-3 mr-1" />
+                              {college.city}, {college.state}
+                            </p>
+                            <p className="text-sm font-medium text-foreground mb-2">
+                              💰 {college.approx_fees}
+                            </p>
+                            <p className="text-xs text-muted-foreground mb-3">{college.match_reason}</p>
+                            <div className="space-y-2">
+                              <Button asChild size="sm" className="w-full">
+                                <a href={college.admission_link} target="_blank" rel="noopener noreferrer">
+                                  Visit Website
+                                </a>
+                              </Button>
+                              <FeedbackButtons 
+                                recommendationType="college" 
+                                recommendationId={college.id}
+                                className="justify-center"
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Scholarships Tab */}
+            <TabsContent value="scholarships" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Available Scholarships
+                  </CardTitle>
+                  <CardDescription>
+                    Active scholarships you're eligible for
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {scholarshipsLoading ? (
+                    <p className="text-center py-8 text-muted-foreground">Loading scholarships...</p>
+                  ) : scholarships.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">No scholarships available yet</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {scholarships.slice(0, 6).map((scholarship) => (
+                        <Card key={scholarship.id} className="hover:shadow-lg transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <h3 className="font-semibold text-foreground">{scholarship.name}</h3>
+                              <Badge variant="secondary" className="ml-2">
+                                {Math.round(scholarship.confidence_score)}% match
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{scholarship.provider}</p>
+                            <p className="text-sm font-medium text-foreground mb-2">
+                              💰 {scholarship.amount}
+                            </p>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              📅 Deadline: {new Date(scholarship.deadline).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground mb-3">{scholarship.match_reason}</p>
+                            <div className="space-y-2">
+                              <Button asChild size="sm" className="w-full">
+                                <a href={scholarship.apply_url} target="_blank" rel="noopener noreferrer">
+                                  Apply Now
+                                </a>
+                              </Button>
+                              <FeedbackButtons 
+                                recommendationType="scholarship" 
+                                recommendationId={scholarship.id}
+                                showApplied={true}
+                                className="justify-center"
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
