@@ -64,31 +64,53 @@ serve(async (req) => {
 
     // Analyze quiz responses to determine category strengths
     const categoryScores = responses.reduce((acc: any, response: any) => {
-      if (!acc[response.category]) {
-        acc[response.category] = { correct: 0, total: 0 };
+      const category = response.category?.toLowerCase() || 'general';
+      if (!acc[category]) {
+        acc[category] = { correct: 0, total: 0 };
       }
-      acc[response.category].total++;
+      acc[category].total++;
       if (response.isCorrect) {
-        acc[response.category].correct++;
+        acc[category].correct++;
       }
       return acc;
     }, {});
 
-    // Calculate percentages and create profile
-    const profile = Object.entries(categoryScores).map(([category, scores]: any) => ({
-      category,
-      score: (scores.correct / scores.total) * 100
-    }));
+    // Calculate percentages and create deterministic profile
+    const profile = Object.entries(categoryScores)
+      .map(([category, scores]: any) => ({
+        category,
+        score: Math.round((scores.correct / scores.total) * 100), // Round for consistency
+        correct: scores.correct,
+        total: scores.total
+      }))
+      .sort((a, b) => b.score - a.score); // Sort by score for consistency
 
-    // Create AI prompt based on category scores
-    const promptData = profile.map(p => `${p.category}: ${p.score.toFixed(1)}%`).join(', ');
+    // Log for reproducibility verification
+    console.log('Profile generated:', JSON.stringify(profile, null, 2));
+
+    // Get user profile for context
+    const { data: userProfile } = await supabaseClient
+      .from('profiles')
+      .select('class_level, study_area')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const classLevel = userProfile?.class_level || 'UG';
+    const studyArea = userProfile?.study_area || 'All';
+
+    // Create AI prompt based on category scores with deterministic formatting
+    const promptData = profile
+      .map(p => `${p.category}: ${p.score}% (${p.correct}/${p.total})`)
+      .join(', ');
+    
+    console.log('Generating recommendations for:', promptData);
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Call Lovable AI to generate career recommendations
+    // Call Lovable AI to generate career recommendations with structured output
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -100,11 +122,34 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a career counselor AI. Based on quiz scores in different categories, recommend 5 suitable careers with confidence scores. Return ONLY valid JSON matching this exact format: {"recommendations": [{"career": "Career Title", "confidence": 85, "reason": "Brief explanation"}]}. Do not include any markdown formatting or extra text.'
+            content: `You are a career counselor AI. Based on aptitude test scores, recommend exactly 5 suitable careers.
+
+SCORING GUIDE:
+- 80-100%: Exceptional strength
+- 60-79%: Strong ability
+- 40-59%: Moderate capability
+- Below 40%: Area for development
+
+CAREER MATCHING RULES:
+- Technical + Logical high → Engineering, Software, IT
+- Quantitative + Analytical high → Finance, Data Science, Research
+- Creative + Verbal high → Design, Writing, Marketing
+- Interpersonal + Verbal high → Management, HR, Teaching
+- Match careers to demonstrated strengths, not wishful thinking
+
+Confidence scores should reflect:
+- 80-100: Perfect match (top 2 skills align strongly)
+- 60-79: Good match (1-2 relevant strengths)
+- 40-59: Possible match (some alignment)
+
+Be honest and data-driven. Return structured JSON only.`
           },
           {
             role: 'user',
-            content: `User scored: ${promptData}. Suggest 5 careers with confidence scores (0-100).`
+            content: `Student Profile - ${classLevel} Level, ${studyArea} Stream
+Aptitude Scores: ${promptData}
+
+Generate exactly 5 career recommendations ranked by suitability. Consider the complete profile, not just the top score.`
           }
         ],
         tools: [
@@ -112,18 +157,31 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "recommend_careers",
-              description: "Return 5 career recommendations with confidence scores",
+              description: "Return exactly 5 career recommendations with confidence scores based on aptitude analysis",
               parameters: {
                 type: "object",
                 properties: {
                   recommendations: {
                     type: "array",
+                    minItems: 5,
+                    maxItems: 5,
                     items: {
                       type: "object",
                       properties: {
-                        career: { type: "string" },
-                        confidence: { type: "number" },
-                        reason: { type: "string" }
+                        career: { 
+                          type: "string",
+                          description: "Specific career title"
+                        },
+                        confidence: { 
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          description: "Match confidence 0-100"
+                        },
+                        reason: { 
+                          type: "string",
+                          description: "Brief explanation referencing specific aptitude scores"
+                        }
                       },
                       required: ["career", "confidence", "reason"],
                       additionalProperties: false
@@ -153,73 +211,139 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI Response:', JSON.stringify(aiData));
+    console.log('AI Response received');
 
-    // Extract recommendations from tool call
+    // Extract recommendations from tool call with validation
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
+      console.error('No tool call in AI response:', JSON.stringify(aiData));
       throw new Error('No tool call in AI response');
     }
 
-    const recommendations = JSON.parse(toolCall.function.arguments).recommendations;
+    let recommendations;
+    try {
+      const args = JSON.parse(toolCall.function.arguments);
+      recommendations = args.recommendations;
+      
+      // Validate recommendations structure
+      if (!Array.isArray(recommendations)) {
+        throw new Error('Recommendations is not an array');
+      }
+      
+      if (recommendations.length !== 5) {
+        console.warn(`Expected 5 recommendations, got ${recommendations.length}`);
+      }
+      
+      // Validate each recommendation
+      recommendations.forEach((rec, idx) => {
+        if (!rec.career || typeof rec.confidence !== 'number' || !rec.reason) {
+          throw new Error(`Recommendation ${idx + 1} missing required fields`);
+        }
+        if (rec.confidence < 0 || rec.confidence > 100) {
+          throw new Error(`Recommendation ${idx + 1} has invalid confidence score: ${rec.confidence}`);
+        }
+      });
+      
+      console.log(`Validated ${recommendations.length} recommendations successfully`);
+    } catch (e) {
+      console.error('Failed to parse recommendations:', e);
+      console.error('Tool call:', JSON.stringify(toolCall));
+      throw new Error(`Invalid recommendations format: ${e instanceof Error ? e.message : 'Parse error'}`);
+    }
 
     // Get or create career entries and save recommendations
     const savedRecommendations = [];
     
     for (const rec of recommendations) {
-      // Check if career exists, create if not
-      let { data: existingCareer } = await supabaseClient
-        .from('careers')
-        .select('id')
-        .ilike('title', rec.career)
-        .single();
-
-      let careerId;
-      if (!existingCareer) {
-        const { data: newCareer, error: careerError } = await supabaseClient
+      try {
+        // Check if career exists, create if not
+        let { data: existingCareer } = await supabaseClient
           .from('careers')
-          .insert({
-            title: rec.career,
-            description: rec.reason,
-            category: profile.reduce((max, p) => p.score > max.score ? p : max).category
-          })
           .select('id')
-          .single();
+          .ilike('title', rec.career)
+          .maybeSingle(); // Use maybeSingle to avoid errors on no match
 
-        if (careerError) throw careerError;
-        careerId = newCareer.id;
-      } else {
-        careerId = existingCareer.id;
+        let careerId;
+        if (!existingCareer) {
+          const { data: newCareer, error: careerError } = await supabaseClient
+            .from('careers')
+            .insert({
+              title: rec.career.trim(),
+              description: rec.reason.trim(),
+              category: profile[0]?.category || 'general'
+            })
+            .select('id')
+            .maybeSingle();
+
+          if (careerError) {
+            console.error('Error creating career:', careerError);
+            throw careerError;
+          }
+          
+          if (!newCareer) {
+            throw new Error(`Failed to create career: ${rec.career}`);
+          }
+          
+          careerId = newCareer.id;
+        } else {
+          careerId = existingCareer.id;
+        }
+
+        // Save recommendation
+        const { data: savedRec, error: recError } = await supabaseClient
+          .from('career_recommendations')
+          .insert({
+            user_id: user.id,
+            quiz_session_id: quizSessionId,
+            career_id: careerId,
+            confidence_score: Math.round(rec.confidence) // Ensure integer
+          })
+          .select(`
+            *,
+            careers (*)
+          `)
+          .maybeSingle();
+
+        if (recError) {
+          console.error('Error saving recommendation:', recError);
+          throw recError;
+        }
+        
+        if (savedRec) {
+          savedRecommendations.push(savedRec);
+        }
+      } catch (error) {
+        console.error(`Error processing recommendation for ${rec.career}:`, error);
+        // Continue with other recommendations even if one fails
       }
-
-      // Save recommendation
-      const { data: savedRec, error: recError } = await supabaseClient
-        .from('career_recommendations')
-        .insert({
-          user_id: user.id,
-          quiz_session_id: quizSessionId,
-          career_id: careerId,
-          confidence_score: rec.confidence
-        })
-        .select(`
-          *,
-          careers (*)
-        `)
-        .single();
-
-      if (recError) throw recError;
-      savedRecommendations.push(savedRec);
     }
 
+    if (savedRecommendations.length === 0) {
+      throw new Error('Failed to save any recommendations');
+    }
+
+    console.log(`Successfully saved ${savedRecommendations.length} recommendations`);
+
     // Update quiz session as completed
-    await supabaseClient
+    const avgScore = profile.length > 0 
+      ? Math.round(profile.reduce((sum, p) => sum + p.score, 0) / profile.length)
+      : 0;
+      
+    const { error: updateError } = await supabaseClient
       .from('quiz_sessions')
       .update({ 
         completed: true, 
         completed_at: new Date().toISOString(),
-        score: Math.round(profile.reduce((sum, p) => sum + p.score, 0) / profile.length)
+        score: avgScore
       })
       .eq('id', quizSessionId);
+
+    if (updateError) {
+      console.error('Error updating quiz session:', updateError);
+      // Don't throw - recommendations are already saved
+    }
+
+    console.log(`Quiz session ${quizSessionId} completed with score ${avgScore}`);
 
     return new Response(
       JSON.stringify({ 

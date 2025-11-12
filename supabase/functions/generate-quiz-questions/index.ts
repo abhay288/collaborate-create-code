@@ -24,20 +24,40 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    // Define system prompt for question generation
-    const systemPrompt = `You are an expert aptitude test creator. Generate high-quality, diverse aptitude questions tailored for ${classLevel} level students in ${studyArea} stream.
+    // Define system prompt for question generation with profile awareness
+    const systemPrompt = `You are an expert aptitude test creator. Generate high-quality, diverse aptitude questions tailored specifically for ${classLevel} level students in ${studyArea} stream.
 
-Categories to cover: logical, analytical, creative, technical, quantitative, verbal, interpersonal
+CRITICAL: Questions must be:
+1. Age-appropriate for ${classLevel} students
+2. Relevant to ${studyArea} academic background
+3. Balanced across all 7 categories
+4. Progressive in difficulty (mix of easy, medium, hard)
+
+Categories to cover (aim for 2-3 questions per category):
+- logical: Pattern recognition, deductive reasoning
+- analytical: Problem decomposition, critical thinking
+- creative: Innovation, out-of-box thinking
+- technical: Technology aptitude, computational thinking
+- quantitative: Mathematical reasoning, numerical ability
+- verbal: Language comprehension, communication
+- interpersonal: Emotional intelligence, teamwork scenarios
 
 For each question:
-- Make it relevant to the student's level and stream
-- Include 4 options with varying point values (1-5)
-- Higher points = better answer quality
-- Ensure questions test real aptitude, not just knowledge`;
+- Make it scenario-based and practical
+- Include exactly 4 options with differentiated point values (1-5)
+- Higher points = more optimal/insightful answer
+- Ensure questions test real aptitude, not memorized knowledge
+- Avoid cultural or regional bias`;
 
-    const userPrompt = `Generate 20 diverse aptitude test questions for a ${classLevel} student studying ${studyArea}. 
+    const userPrompt = `Generate exactly 20 diverse aptitude test questions for a ${classLevel} student studying ${studyArea}. 
 
-Return ONLY a JSON array with this exact structure:
+REQUIREMENTS:
+- Distribute questions across all 7 categories (2-3 per category)
+- Vary difficulty levels within each category
+- Make questions relevant to ${studyArea} context where applicable
+- Use real-world scenarios students can relate to
+
+Return ONLY a JSON array with this exact structure (no markdown, no extra text):
 [
   {
     "question_text": "Question here",
@@ -53,7 +73,14 @@ Return ONLY a JSON array with this exact structure:
   }
 ]
 
-Ensure variety across all 7 categories.`;
+VALIDATION:
+- Exactly 20 questions
+- All 7 categories represented
+- Each question has exactly 4 options
+- Points range from 1-5
+- No duplicate questions`;
+
+    console.log(`Generating questions for: ${classLevel} - ${studyArea}`);
 
     console.log('Calling Lovable AI to generate questions...');
 
@@ -92,26 +119,72 @@ Ensure variety across all 7 categories.`;
       throw new Error('No content generated');
     }
 
-    // Parse JSON from response
+    // Parse JSON from response with validation
     let questions;
     try {
       // Remove markdown code blocks if present
       const jsonMatch = content.match(/\[[\s\S]*\]/);
-      questions = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+      const jsonString = jsonMatch ? jsonMatch[0] : content;
+      questions = JSON.parse(jsonString);
+      
+      // Validate response structure
+      if (!Array.isArray(questions)) {
+        throw new Error('Response is not an array');
+      }
+      
+      if (questions.length !== 20) {
+        console.warn(`Expected 20 questions, got ${questions.length}`);
+      }
+      
+      // Validate each question structure
+      questions.forEach((q, index) => {
+        if (!q.question_text || !q.category || !q.options) {
+          throw new Error(`Question ${index + 1} missing required fields`);
+        }
+        if (!Array.isArray(q.options) || q.options.length !== 4) {
+          throw new Error(`Question ${index + 1} must have exactly 4 options`);
+        }
+        // Validate points in options
+        q.options.forEach((opt: any, optIdx: number) => {
+          if (!opt.text || typeof opt.points !== 'number' || opt.points < 1 || opt.points > 5) {
+            throw new Error(`Question ${index + 1}, Option ${optIdx + 1} has invalid points`);
+          }
+        });
+      });
+      
+      console.log(`Validated ${questions.length} questions successfully`);
     } catch (e) {
-      console.error('Failed to parse AI response:', content);
-      throw new Error('Invalid AI response format');
+      console.error('Failed to parse/validate AI response:', e);
+      console.error('AI Content:', content);
+      throw new Error(`Invalid AI response format: ${e instanceof Error ? e.message : 'Parse error'}`);
     }
 
     // Validate and insert questions into database
-    const questionsToInsert = questions.map((q: any) => ({
-      question_text: q.question_text,
-      category: q.category,
-      options: q.options,
-      target_class_levels: q.target_class_levels || [classLevel],
-      target_study_areas: q.target_study_areas || [studyArea],
-      points: 1
-    }));
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error('No valid questions to insert');
+    }
+
+    const questionsToInsert = questions.map((q: any, index: number) => {
+      try {
+        return {
+          question_text: q.question_text?.trim() || `Question ${index + 1}`,
+          category: q.category?.toLowerCase() || 'general',
+          options: q.options || [],
+          target_class_levels: Array.isArray(q.target_class_levels) ? q.target_class_levels : [classLevel],
+          target_study_areas: Array.isArray(q.target_study_areas) ? q.target_study_areas : [studyArea],
+          points: 1
+        };
+      } catch (error) {
+        console.error(`Error formatting question ${index + 1}:`, error);
+        return null;
+      }
+    }).filter(q => q !== null); // Remove any null entries
+
+    if (questionsToInsert.length === 0) {
+      throw new Error('No valid questions after formatting');
+    }
+
+    console.log(`Inserting ${questionsToInsert.length} questions into database...`);
 
     const { data: insertedQuestions, error: insertError } = await supabaseClient
       .from('quiz_questions')
@@ -120,7 +193,11 @@ Ensure variety across all 7 categories.`;
 
     if (insertError) {
       console.error('Error inserting questions:', insertError);
-      throw insertError;
+      throw new Error(`Database insertion failed: ${insertError.message}`);
+    }
+
+    if (!insertedQuestions || insertedQuestions.length === 0) {
+      throw new Error('No questions were inserted');
     }
 
     console.log(`Successfully generated and inserted ${insertedQuestions.length} questions`);

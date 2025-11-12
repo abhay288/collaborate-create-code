@@ -34,66 +34,115 @@ export default function Colleges() {
   };
 
   const states = useMemo(() => {
-    const stateSet = new Set<string>();
-    colleges.forEach(college => {
-      if (college.state) stateSet.add(college.state);
-    });
-    return ["All", ...Array.from(stateSet)].sort();
+    try {
+      const safeColleges = Array.isArray(colleges) ? colleges : [];
+      const stateSet = new Set<string>();
+      safeColleges.forEach(college => {
+        if (college?.state) stateSet.add(college.state);
+      });
+      return ["All", ...Array.from(stateSet)].sort();
+    } catch (error) {
+      console.error('Error extracting states:', error);
+      return ["All"];
+    }
   }, [colleges]);
 
   const districts = useMemo(() => {
-    const districtSet = new Set<string>();
-    colleges.forEach(college => {
-      if (college.district && (selectedState === "All" || college.state === selectedState)) {
-        districtSet.add(college.district);
-      }
-    });
-    return ["All", ...Array.from(districtSet)].sort();
+    try {
+      const safeColleges = Array.isArray(colleges) ? colleges : [];
+      const districtSet = new Set<string>();
+      safeColleges.forEach(college => {
+        if (college?.district && (selectedState === "All" || college?.state === selectedState)) {
+          districtSet.add(college.district);
+        }
+      });
+      return ["All", ...Array.from(districtSet)].sort();
+    } catch (error) {
+      console.error('Error extracting districts:', error);
+      return ["All"];
+    }
   }, [colleges, selectedState]);
 
   const collegeTypes = useMemo(() => {
-    const typeSet = new Set<string>();
-    colleges.forEach(college => {
-      if (college.college_type) typeSet.add(college.college_type);
-    });
-    return ["All", ...Array.from(typeSet)].sort();
+    try {
+      const safeColleges = Array.isArray(colleges) ? colleges : [];
+      const typeSet = new Set<string>();
+      safeColleges.forEach(college => {
+        if (college?.college_type) typeSet.add(college.college_type);
+      });
+      return ["All", ...Array.from(typeSet)].sort();
+    } catch (error) {
+      console.error('Error extracting types:', error);
+      return ["All"];
+    }
   }, [colleges]);
 
   const courses = useMemo(() => {
-    const courseSet = new Set<string>();
-    colleges.forEach(college => {
-      if (college.courses_offered && Array.isArray(college.courses_offered)) {
-        college.courses_offered.forEach(course => courseSet.add(course));
-      }
-    });
-    return ["All", ...Array.from(courseSet)].sort();
+    try {
+      const safeColleges = Array.isArray(colleges) ? colleges : [];
+      const courseSet = new Set<string>();
+      safeColleges.forEach(college => {
+        if (Array.isArray(college?.courses_offered)) {
+          college.courses_offered.forEach(course => courseSet.add(course));
+        }
+      });
+      return ["All", ...Array.from(courseSet)].sort();
+    } catch (error) {
+      console.error('Error extracting courses:', error);
+      return ["All"];
+    }
   }, [colleges]);
 
   const filteredColleges = useMemo(() => {
-    const filtered = colleges
-      .filter(college => {
-        const matchesSearch = college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             college.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             college.district?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesState = selectedState === "All" || college.state === selectedState;
-        const matchesDistrict = selectedDistrict === "All" || college.district === selectedDistrict;
-        const matchesType = selectedType === "All" || college.college_type === selectedType;
-        const matchesCourse = selectedCourse === "All" || 
-          (college.courses_offered && college.courses_offered.includes(selectedCourse));
-        
-        return matchesSearch && matchesState && matchesDistrict && matchesType && matchesCourse;
-      })
-      .sort((a, b) => {
-        switch(sortBy) {
-          case "rating": return (b.rating || 0) - (a.rating || 0);
-          case "fees-low": return (a.fees || 0) - (b.fees || 0);
-          case "fees-high": return (b.fees || 0) - (a.fees || 0);
-          case "name": return (a.name || "").localeCompare(b.name || "");
-          default: return 0;
-        }
-      });
+    try {
+      // Safety check: Ensure colleges is an array
+      const safeColleges = Array.isArray(colleges) ? colleges : [];
+      
+      const filtered = safeColleges
+        .filter(college => {
+          // Safety checks for each property to prevent crashes
+          const collegeName = college?.name?.toLowerCase() || '';
+          const collegeLocation = college?.location?.toLowerCase() || '';
+          const collegeDistrict = college?.district?.toLowerCase() || '';
+          const collegeState = college?.state || '';
+          const collegeType = college?.college_type || '';
+          const coursesOffered = Array.isArray(college?.courses_offered) ? college.courses_offered : [];
+          
+          const matchesSearch = collegeName.includes(searchTerm.toLowerCase()) ||
+                               collegeLocation.includes(searchTerm.toLowerCase()) ||
+                               collegeDistrict.includes(searchTerm.toLowerCase());
+          const matchesState = selectedState === "All" || collegeState === selectedState;
+          const matchesDistrict = selectedDistrict === "All" || collegeDistrict === selectedDistrict;
+          const matchesType = selectedType === "All" || collegeType === selectedType;
+          const matchesCourse = selectedCourse === "All" || coursesOffered.includes(selectedCourse);
+          
+          return matchesSearch && matchesState && matchesDistrict && matchesType && matchesCourse;
+        })
+        .sort((a, b) => {
+          try {
+            switch(sortBy) {
+              case "rating": 
+                return (b?.rating || 0) - (a?.rating || 0);
+              case "fees-low": 
+                return (a?.fees || 0) - (b?.fees || 0);
+              case "fees-high": 
+                return (b?.fees || 0) - (a?.fees || 0);
+              case "name": 
+                return (a?.name || "").localeCompare(b?.name || "");
+              default: 
+                return 0;
+            }
+          } catch (error) {
+            console.error('Error sorting colleges:', error);
+            return 0;
+          }
+        });
 
-    return filtered;
+      return filtered;
+    } catch (error) {
+      console.error('Error filtering colleges:', error);
+      return [];
+    }
   }, [colleges, searchTerm, selectedState, selectedDistrict, selectedType, selectedCourse, sortBy]);
 
   const paginatedColleges = useMemo(() => {
