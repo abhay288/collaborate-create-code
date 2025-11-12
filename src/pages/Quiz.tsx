@@ -74,56 +74,105 @@ export default function Quiz() {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('class_level, study_area')
+          .select('class_level, study_area, interests, preferred_state, preferred_district')
           .eq('id', user.id)
           .maybeSingle();
 
-        // Use default values if profile not set
-        const classLevel = profile?.class_level || '12th';
-        const studyArea = profile?.study_area || 'All';
+        // Validate profile completeness
+        if (!profile?.class_level || !profile?.study_area) {
+          toast.error('Please complete your profile before taking the quiz', { duration: 4000 });
+          navigate('/onboarding');
+          return;
+        }
+
+        // Get past quiz scores for profile context
+        const { data: pastSessions } = await supabase
+          .from('quiz_sessions')
+          .select('category_scores')
+          .eq('user_id', user.id)
+          .eq('completed', true)
+          .order('completed_at', { ascending: false })
+          .limit(3);
+
+        const pastScores = pastSessions?.flatMap(session => 
+          session.category_scores 
+            ? Object.entries(session.category_scores as Record<string, any>).map(([category, scores]: [string, any]) => ({
+                category,
+                score: Math.round((scores.total / scores.max) * 100)
+              }))
+            : []
+        ) || [];
+
+        // Build comprehensive user profile for quiz generation
+        const userProfile = {
+          userId: user.id,
+          class_level: profile.class_level,
+          study_area: profile.study_area,
+          interests: profile.interests || [],
+          location: {
+            state: profile.preferred_state,
+            district: profile.preferred_district
+          },
+          past_scores: pastScores
+        };
 
         // Fetch filtered questions using the database function
         const { data, error } = await supabase
           .rpc('get_filtered_quiz_questions', {
-            p_class_level: classLevel,
-            p_study_area: studyArea,
+            p_class_level: profile.class_level,
+            p_study_area: profile.study_area,
             p_limit: 20
           });
 
         if (error) throw error;
 
-        // If no questions found, generate new ones using AI
+        // If no questions found, generate new ones using AI with full profile
         if (!data || data.length === 0) {
-          toast.info('Generating personalized questions for you...');
+          toast.info('Generating personalized questions for you...', { duration: 3000 });
           
           const { data: generatedData, error: genError } = await supabase.functions.invoke(
             'generate-quiz-questions',
             {
-              body: { classLevel, studyArea }
+              body: { 
+                profile: userProfile
+                // seed: 12345 // Optional: for deterministic debugging
+              }
             }
           );
 
           if (genError) {
             console.error('Error generating questions:', genError);
-            toast.error('Failed to generate quiz questions');
-            navigate('/dashboard');
+            const errorMessage = (genError as any).message || 'Failed to generate quiz questions';
+            const errorCode = (genError as any).code;
+            
+            if (errorCode === 'ERR_MISSING_PROFILE_FIELD') {
+              toast.error('Profile incomplete. Please update your profile.', { duration: 4000 });
+              navigate('/profile');
+            } else {
+              toast.error(errorMessage, { duration: 4000 });
+              navigate('/dashboard');
+            }
             return;
           }
 
           if (generatedData?.questions && generatedData.questions.length > 0) {
-            // Shuffle questions and their options
-            const shuffledQuestions = shuffleArray(generatedData.questions).map((q: any) => ({
+            // Questions are already shuffled by edge function if seed provided
+            const questions = generatedData.questions.map((q: any) => ({
               ...q,
-              options: shuffleArray(Array.isArray(q.options) ? q.options : q.options?.options || [])
+              options: Array.isArray(q.options) ? q.options : q.options?.options || []
             }));
-            setQuizQuestions(shuffledQuestions);
-            toast.success('Personalized quiz ready!');
+            setQuizQuestions(questions);
+            
+            const sourceText = generatedData.source === 'fallback_bank' 
+              ? 'from verified question bank' 
+              : 'AI-generated';
+            toast.success(`Personalized quiz ready! (${sourceText})`, { duration: 2000 });
           } else {
-            toast.error('No questions generated. Please try again.');
+            toast.error('No questions available. Please try again later.', { duration: 4000 });
             navigate('/dashboard');
           }
         } else {
-          // Shuffle questions and their options
+          // Shuffle questions and their options from database
           const shuffledQuestions = shuffleArray(data).map((q: any) => ({
             ...q,
             options: shuffleArray(Array.isArray(q.options) ? q.options : q.options?.options || [])

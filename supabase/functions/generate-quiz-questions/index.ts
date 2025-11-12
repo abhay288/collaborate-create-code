@@ -6,16 +6,150 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Error codes for structured responses
+const ERROR_CODES = {
+  MISSING_PROFILE_FIELD: 'ERR_MISSING_PROFILE_FIELD',
+  INVALID_PROFILE_DATA: 'ERR_INVALID_PROFILE_DATA',
+  AI_GENERATION_FAILED: 'ERR_AI_GENERATION_FAILED',
+  NO_QUESTIONS_AVAILABLE: 'ERR_NO_QUESTIONS_AVAILABLE',
+  DATABASE_ERROR: 'ERR_DATABASE_ERROR',
+};
+
+// Profile validation schema
+interface UserProfile {
+  userId: string;
+  class_level: string;
+  study_area: string;
+  interests?: string[];
+  location?: { state?: string; district?: string };
+  past_scores?: { category: string; score: number }[];
+}
+
+// Deterministic seeding for debugging
+function seedRandom(seed: number) {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+}
+
+function shuffleWithSeed<T>(array: T[], seed?: number): T[] {
+  if (!seed) {
+    // Random shuffle if no seed
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+  
+  // Deterministic shuffle with seed
+  const shuffled = [...array];
+  const random = seedRandom(seed);
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Validate profile fields
+function validateProfile(profile: any): { valid: boolean; error?: { code: string; message: string; field?: string } } {
+  if (!profile) {
+    return { valid: false, error: { code: ERROR_CODES.MISSING_PROFILE_FIELD, message: 'Profile data is required', field: 'profile' } };
+  }
+
+  if (!profile.userId || typeof profile.userId !== 'string') {
+    return { valid: false, error: { code: ERROR_CODES.MISSING_PROFILE_FIELD, message: 'User ID is required', field: 'userId' } };
+  }
+
+  if (!profile.class_level || typeof profile.class_level !== 'string') {
+    return { valid: false, error: { code: ERROR_CODES.MISSING_PROFILE_FIELD, message: 'Class level is required', field: 'class_level' } };
+  }
+
+  if (!profile.study_area || typeof profile.study_area !== 'string') {
+    return { valid: false, error: { code: ERROR_CODES.MISSING_PROFILE_FIELD, message: 'Study area is required', field: 'study_area' } };
+  }
+
+  const validClassLevels = ['10th', '12th', 'UG', 'PG', 'Diploma'];
+  if (!validClassLevels.includes(profile.class_level)) {
+    return { valid: false, error: { code: ERROR_CODES.INVALID_PROFILE_DATA, message: `Invalid class level. Must be one of: ${validClassLevels.join(', ')}`, field: 'class_level' } };
+  }
+
+  const validStudyAreas = ['Science', 'Commerce', 'Arts', 'All'];
+  if (!validStudyAreas.includes(profile.study_area)) {
+    return { valid: false, error: { code: ERROR_CODES.INVALID_PROFILE_DATA, message: `Invalid study area. Must be one of: ${validStudyAreas.join(', ')}`, field: 'study_area' } };
+  }
+
+  return { valid: true };
+}
+
+// Get questions from verified question bank as fallback
+async function getQuestionBankFallback(supabaseClient: any, profile: UserProfile, limit: number = 20): Promise<any[]> {
+  console.log('Attempting to fetch from question bank fallback...');
+  
+  const { data, error } = await supabaseClient
+    .rpc('get_filtered_quiz_questions', {
+      p_class_level: profile.class_level,
+      p_study_area: profile.study_area,
+      p_limit: limit
+    });
+
+  if (error) {
+    console.error('Question bank fallback error:', error);
+    throw new Error('Question bank unavailable');
+  }
+
+  if (!data || data.length === 0) {
+    console.error('No questions in fallback bank');
+    throw new Error('No questions available in question bank');
+  }
+
+  console.log(`Retrieved ${data.length} questions from fallback bank`);
+  return data;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { classLevel, studyArea } = await req.json();
+    const body = await req.json();
+    const profile: UserProfile = body.profile || { 
+      userId: body.userId, 
+      class_level: body.classLevel, 
+      study_area: body.studyArea,
+      interests: body.interests,
+      location: body.location,
+      past_scores: body.past_scores
+    };
+    const seed = body.seed; // Optional deterministic seed for debugging
     
+    // Validate profile
+    const validation = validateProfile(profile);
+    if (!validation.valid) {
+      console.error('Profile validation failed:', validation.error);
+      return new Response(
+        JSON.stringify({ 
+          error: validation.error!.message,
+          code: validation.error!.code,
+          field: validation.error!.field
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+    
+    console.log('Validated profile:', { userId: profile.userId, class_level: profile.class_level, study_area: profile.study_area });
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
@@ -24,16 +158,35 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    // Define system prompt for question generation with profile awareness
-    const systemPrompt = `You are an expert aptitude test creator. Generate high-quality, diverse aptitude questions tailored specifically for ${classLevel} level students in ${studyArea} stream.
+    // Build enhanced profile context
+    const interestsContext = profile.interests && profile.interests.length > 0 
+      ? `Student interests: ${profile.interests.join(', ')}` 
+      : '';
+    
+    const locationContext = profile.location?.state 
+      ? `Location: ${profile.location.state}${profile.location.district ? ', ' + profile.location.district : ''}` 
+      : '';
+    
+    const pastScoresContext = profile.past_scores && profile.past_scores.length > 0
+      ? `Past performance: ${profile.past_scores.map(s => `${s.category}: ${s.score}%`).join(', ')}`
+      : '';
 
-CRITICAL: Questions must be:
-1. Age-appropriate for ${classLevel} students
-2. Relevant to ${studyArea} academic background
+    // Define system prompt for question generation with full profile awareness
+    const systemPrompt = `You are an expert aptitude test creator. Generate high-quality, diverse aptitude questions tailored specifically for this student profile:
+- Education Level: ${profile.class_level}
+- Study Area: ${profile.study_area}
+${interestsContext}
+${locationContext}
+${pastScoresContext}
+
+CRITICAL REQUIREMENTS:
+1. Age-appropriate for ${profile.class_level} students
+2. Relevant to ${profile.study_area} academic background
 3. Balanced across all 7 categories
-4. Progressive in difficulty (mix of easy, medium, hard)
+4. Progressive difficulty (easy → medium → hard)
+${profile.interests ? `5. Incorporate student interests where relevant: ${profile.interests.join(', ')}` : ''}
 
-Categories to cover (aim for 2-3 questions per category):
+Categories (aim for 2-3 questions per category):
 - logical: Pattern recognition, deductive reasoning
 - analytical: Problem decomposition, critical thinking
 - creative: Innovation, out-of-box thinking
@@ -42,20 +195,25 @@ Categories to cover (aim for 2-3 questions per category):
 - verbal: Language comprehension, communication
 - interpersonal: Emotional intelligence, teamwork scenarios
 
-For each question:
-- Make it scenario-based and practical
-- Include exactly 4 options with differentiated point values (1-5)
+Question Guidelines:
+- Scenario-based and practical
+- Exactly 4 options with differentiated point values (1-5)
 - Higher points = more optimal/insightful answer
-- Ensure questions test real aptitude, not memorized knowledge
-- Avoid cultural or regional bias`;
+- Test real aptitude, not memorized knowledge
+- No cultural or regional bias`;
 
-    const userPrompt = `Generate exactly 20 diverse aptitude test questions for a ${classLevel} student studying ${studyArea}. 
+    const userPrompt = `Generate exactly 20 diverse aptitude test questions for this student profile:
+- Level: ${profile.class_level}
+- Stream: ${profile.study_area}
+${interestsContext}
+${pastScoresContext}
 
 REQUIREMENTS:
 - Distribute questions across all 7 categories (2-3 per category)
 - Vary difficulty levels within each category
-- Make questions relevant to ${studyArea} context where applicable
+- Make questions relevant to ${profile.study_area} context where applicable
 - Use real-world scenarios students can relate to
+${profile.interests ? `- Incorporate interests where natural: ${profile.interests.join(', ')}` : ''}
 
 Return ONLY a JSON array with this exact structure (no markdown, no extra text):
 [
@@ -68,8 +226,8 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
       {"text": "Option 3", "points": 5},
       {"text": "Option 4", "points": 2}
     ],
-    "target_class_levels": ["${classLevel}"],
-    "target_study_areas": ["${studyArea}"]
+    "target_class_levels": ["${profile.class_level}"],
+    "target_study_areas": ["${profile.study_area}"]
   }
 ]
 
@@ -80,49 +238,50 @@ VALIDATION:
 - Points range from 1-5
 - No duplicate questions`;
 
-    console.log(`Generating questions for: ${classLevel} - ${studyArea}`);
+    console.log(`Generating questions for profile: ${profile.class_level} - ${profile.study_area}${seed ? ` (seed: ${seed})` : ''}`);
 
-    console.log('Calling Lovable AI to generate questions...');
-
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.8,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
-      }
-      if (aiResponse.status === 402) {
-        throw new Error('AI credits exhausted. Please add funds.');
-      }
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      throw new Error('Failed to generate questions');
-    }
-
-    const aiData = await aiResponse.json();
-    const content = aiData.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content generated');
-    }
-
-    // Parse JSON from response with validation
     let questions;
+    
+    // Try AI generation first
     try {
-      // Remove markdown code blocks if present
+      console.log('Calling Lovable AI to generate questions...');
+
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: seed ? 0.3 : 0.8, // Lower temperature for deterministic results
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        if (aiResponse.status === 429) {
+          throw new Error('Rate limit exceeded');
+        }
+        if (aiResponse.status === 402) {
+          throw new Error('AI credits exhausted');
+        }
+        const errorText = await aiResponse.text();
+        console.error('AI API error:', aiResponse.status, errorText);
+        throw new Error('AI generation failed');
+      }
+
+      const aiData = await aiResponse.json();
+      const content = aiData.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No content generated');
+      }
+
+      // Parse JSON from response with validation
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       const jsonString = jsonMatch ? jsonMatch[0] : content;
       questions = JSON.parse(jsonString);
@@ -152,39 +311,102 @@ VALIDATION:
         });
       });
       
-      console.log(`Validated ${questions.length} questions successfully`);
-    } catch (e) {
-      console.error('Failed to parse/validate AI response:', e);
-      console.error('AI Content:', content);
-      throw new Error(`Invalid AI response format: ${e instanceof Error ? e.message : 'Parse error'}`);
+      console.log(`AI generated ${questions.length} questions successfully`);
+      
+    } catch (aiError) {
+      console.error('AI generation error:', aiError);
+      console.log('Falling back to verified question bank...');
+      
+      // FALLBACK: Use verified question bank
+      try {
+        questions = await getQuestionBankFallback(supabaseClient, profile);
+        console.log('Successfully retrieved questions from fallback bank');
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to generate or retrieve questions',
+            code: ERROR_CODES.NO_QUESTIONS_AVAILABLE,
+            details: {
+              ai_error: aiError instanceof Error ? aiError.message : 'AI generation failed',
+              fallback_error: fallbackError instanceof Error ? fallbackError.message : 'Question bank unavailable'
+            }
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
     }
 
-    // Validate and insert questions into database
-    if (!Array.isArray(questions) || questions.length === 0) {
-      throw new Error('No valid questions to insert');
+    // Shuffle questions if seed provided (deterministic) or randomly
+    const shuffledQuestions = shuffleWithSeed(questions, seed);
+    
+    // If questions came from fallback, they already exist in DB, just return them
+    const questionsAlreadyInDb = shuffledQuestions[0]?.id !== undefined;
+    
+    if (questionsAlreadyInDb) {
+      console.log(`Returning ${shuffledQuestions.length} questions from database (fallback)`);
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          questions: shuffledQuestions,
+          count: shuffledQuestions.length,
+          source: 'fallback_bank',
+          deterministic: seed !== undefined
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
     }
 
-    const questionsToInsert = questions.map((q: any, index: number) => {
+    // Validate and insert AI-generated questions into database
+    if (!Array.isArray(shuffledQuestions) || shuffledQuestions.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'No valid questions to insert',
+          code: ERROR_CODES.NO_QUESTIONS_AVAILABLE
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    const questionsToInsert = shuffledQuestions.map((q: any, index: number) => {
       try {
         return {
           question_text: q.question_text?.trim() || `Question ${index + 1}`,
           category: q.category?.toLowerCase() || 'general',
           options: q.options || [],
-          target_class_levels: Array.isArray(q.target_class_levels) ? q.target_class_levels : [classLevel],
-          target_study_areas: Array.isArray(q.target_study_areas) ? q.target_study_areas : [studyArea],
+          target_class_levels: Array.isArray(q.target_class_levels) ? q.target_class_levels : [profile.class_level],
+          target_study_areas: Array.isArray(q.target_study_areas) ? q.target_study_areas : [profile.study_area],
           points: 1
         };
       } catch (error) {
         console.error(`Error formatting question ${index + 1}:`, error);
         return null;
       }
-    }).filter(q => q !== null); // Remove any null entries
+    }).filter(q => q !== null);
 
     if (questionsToInsert.length === 0) {
-      throw new Error('No valid questions after formatting');
+      return new Response(
+        JSON.stringify({ 
+          error: 'No valid questions after formatting',
+          code: ERROR_CODES.INVALID_PROFILE_DATA
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
-    console.log(`Inserting ${questionsToInsert.length} questions into database...`);
+    console.log(`Inserting ${questionsToInsert.length} AI-generated questions into database...`);
 
     const { data: insertedQuestions, error: insertError } = await supabaseClient
       .from('quiz_questions')
@@ -192,12 +414,31 @@ VALIDATION:
       .select();
 
     if (insertError) {
-      console.error('Error inserting questions:', insertError);
-      throw new Error(`Database insertion failed: ${insertError.message}`);
+      console.error('Database insertion error:', insertError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database insertion failed',
+          code: ERROR_CODES.DATABASE_ERROR,
+          details: insertError.message
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     if (!insertedQuestions || insertedQuestions.length === 0) {
-      throw new Error('No questions were inserted');
+      return new Response(
+        JSON.stringify({ 
+          error: 'No questions were inserted',
+          code: ERROR_CODES.DATABASE_ERROR
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     console.log(`Successfully generated and inserted ${insertedQuestions.length} questions`);
@@ -206,7 +447,16 @@ VALIDATION:
       JSON.stringify({ 
         success: true,
         questions: insertedQuestions,
-        count: insertedQuestions.length
+        count: insertedQuestions.length,
+        source: 'ai_generated',
+        deterministic: seed !== undefined,
+        profile: {
+          class_level: profile.class_level,
+          study_area: profile.study_area,
+          has_interests: !!profile.interests?.length,
+          has_location: !!profile.location?.state,
+          has_past_scores: !!profile.past_scores?.length
+        }
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -215,10 +465,11 @@ VALIDATION:
     );
 
   } catch (error) {
-    console.error('Error in generate-quiz-questions:', error);
+    console.error('Unexpected error in generate-quiz-questions:', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        code: ERROR_CODES.AI_GENERATION_FAILED
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
