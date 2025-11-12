@@ -21,6 +21,13 @@ interface AptitudeProfile {
   preferred_locations: string[];
   academic_level: 'UG' | 'PG' | 'Diploma';
   score_percentile_or_band: number;
+  user_location?: {
+    latitude: number;
+    longitude: number;
+    city?: string;
+    state?: string;
+  };
+  max_distance_km?: number;
 }
 
 serve(async (req) => {
@@ -147,11 +154,21 @@ async function fetchScholarships(profile: AptitudeProfile, supabase: any) {
 
 async function fetchColleges(profile: AptitudeProfile, supabase: any) {
   // Fetch colleges from our database
-  const { data: dbColleges, error } = await supabase
-    .from('colleges')
-    .select('*')
-    .in('state', profile.preferred_locations)
-    .limit(20);
+  let query = supabase.from('colleges').select('*');
+
+  // If location-based search, fetch more colleges for distance filtering
+  if (!profile.user_location || !profile.user_location.latitude) {
+    // Fallback to location text filtering
+    if (profile.preferred_locations && profile.preferred_locations.length > 0) {
+      query = query.in('state', profile.preferred_locations);
+    }
+    query = query.limit(20);
+  } else {
+    // Fetch more colleges for distance-based filtering
+    query = query.limit(100);
+  }
+
+  const { data: dbColleges, error } = await query;
 
   if (error) {
     console.error('Error fetching colleges:', error);
@@ -166,6 +183,8 @@ async function fetchColleges(profile: AptitudeProfile, supabase: any) {
     city: college.location,
     state: college.state || 'Uttar Pradesh',
     district: college.district,
+    latitude: college.latitude,
+    longitude: college.longitude,
     approx_fees: college.fees ? `₹${college.fees.toLocaleString()}` : 'Contact college',
     admission_link: college.website || 'Contact college directly',
     cutoff_info: college.cutoff_scores || 'Varies by course',
@@ -216,17 +235,51 @@ async function fetchJobs(profile: AptitudeProfile, supabase: any) {
 }
 
 function rankColleges(colleges: any[], profile: AptitudeProfile) {
-  return colleges.map(college => {
+  const maxDistance = profile.max_distance_km || 100;
+  const userLat = profile.user_location?.latitude;
+  const userLon = profile.user_location?.longitude;
+
+  const scored = colleges.map(college => {
     let confidence_score = 40;
     const matchReasons: string[] = [];
+    let distance: number | null = null;
 
-    // Strong location match
-    if (college.state && profile.preferred_locations.includes(college.state)) {
-      confidence_score += 25;
-      matchReasons.push(`Located in ${college.state}`);
+    // Calculate distance if both user and college have coordinates
+    if (userLat && userLon && college.latitude && college.longitude) {
+      // Haversine formula for distance calculation
+      const R = 6371; // Earth's radius in km
+      const dLat = (college.latitude - userLat) * Math.PI / 180;
+      const dLon = (college.longitude - userLon) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(userLat * Math.PI / 180) * Math.cos(college.latitude * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      distance = R * c;
+
+      // Distance-based scoring (35 points max)
+      if (distance <= 10) {
+        confidence_score += 35;
+        matchReasons.push(`Very close - only ${Math.round(distance)} km away`);
+      } else if (distance <= 30) {
+        confidence_score += 30;
+        matchReasons.push(`Nearby - ${Math.round(distance)} km from your location`);
+      } else if (distance <= 50) {
+        confidence_score += 20;
+        matchReasons.push(`Within ${Math.round(distance)} km of your location`);
+      } else if (distance <= maxDistance) {
+        confidence_score += 10;
+        matchReasons.push(`${Math.round(distance)} km away`);
+      }
+    } else {
+      // Fallback to text-based location match (25 points)
+      if (college.state && profile.preferred_locations.includes(college.state)) {
+        confidence_score += 25;
+        matchReasons.push(`Located in ${college.state}`);
+      }
     }
 
-    // Course-aptitude alignment
+    // Course-aptitude alignment (25 points max)
     const courseInfo = college.course?.toLowerCase() || '';
     const coursesOffered = college.courses_offered || [];
     const allCourses = [courseInfo, ...coursesOffered.map((c: string) => c.toLowerCase())].join(' ');
@@ -235,35 +288,32 @@ function rankColleges(colleges: any[], profile: AptitudeProfile) {
     if ((allCourses.includes('engineering') || allCourses.includes('tech') || 
          allCourses.includes('computer') || allCourses.includes('it')) && 
         profile.skills.technical >= 70) {
-      confidence_score += 20;
+      confidence_score += 25;
       matchReasons.push(`Technical programs match your aptitude (${profile.skills.technical}%)`);
     }
-
     // Science/Quantitative match
-    if ((allCourses.includes('science') || allCourses.includes('mathematics') || 
+    else if ((allCourses.includes('science') || allCourses.includes('mathematics') || 
          allCourses.includes('physics') || allCourses.includes('chemistry')) && 
         profile.skills.quantitative >= 70) {
-      confidence_score += 15;
+      confidence_score += 20;
       matchReasons.push(`Science programs match your quantitative skills (${profile.skills.quantitative}%)`);
     }
-
     // Commerce/Business match
-    if ((allCourses.includes('commerce') || allCourses.includes('business') || 
+    else if ((allCourses.includes('commerce') || allCourses.includes('business') || 
          allCourses.includes('management') || allCourses.includes('economics')) && 
         (profile.skills.quantitative >= 60 || profile.skills.interpersonal >= 60)) {
-      confidence_score += 15;
+      confidence_score += 20;
       matchReasons.push('Commerce/Business programs match your profile');
     }
-
     // Arts/Creative match
-    if ((allCourses.includes('arts') || allCourses.includes('design') || 
+    else if ((allCourses.includes('arts') || allCourses.includes('design') || 
          allCourses.includes('media') || allCourses.includes('humanities')) && 
         profile.skills.creative >= 70) {
-      confidence_score += 15;
+      confidence_score += 20;
       matchReasons.push(`Arts programs match your creative aptitude (${profile.skills.creative}%)`);
     }
 
-    // Rating bonus
+    // Rating bonus (10 points max)
     if (college.ranking_source && !college.ranking_source.includes('N/A')) {
       const ratingMatch = college.ranking_source.match(/(\d+\.?\d*)/);
       if (ratingMatch) {
@@ -285,9 +335,29 @@ function rankColleges(colleges: any[], profile: AptitudeProfile) {
     return {
       ...college,
       confidence_score: Math.min(100, confidence_score),
-      match_reason: reason
+      match_reason: reason,
+      distance_km: distance ? Math.round(distance * 10) / 10 : null
     };
-  }).sort((a, b) => b.confidence_score - a.confidence_score).slice(0, 15); // Top 15 colleges
+  });
+
+  // Filter by distance if user location is provided
+  const filtered = userLat && userLon
+    ? scored.filter(c => c.distance_km === null || c.distance_km <= maxDistance)
+    : scored;
+
+  return filtered
+    .sort((a, b) => {
+      // Sort by confidence score first
+      if (b.confidence_score !== a.confidence_score) {
+        return b.confidence_score - a.confidence_score;
+      }
+      // Then by distance (closer is better)
+      if (a.distance_km !== null && b.distance_km !== null) {
+        return a.distance_km - b.distance_km;
+      }
+      return 0;
+    })
+    .slice(0, 15); // Top 15 colleges
 }
 
 // Helper function to identify career type from job data
@@ -592,6 +662,16 @@ function rankJobs(jobs: any[], profile: AptitudeProfile) {
 function generateExplanations(profile: AptitudeProfile, recommendations: any): string[] {
   const explanations: string[] = [];
   
+  // Location-based insights first if available
+  if (profile.user_location?.city || profile.user_location?.state) {
+    const locationName = profile.user_location.city || profile.user_location.state;
+    const nearbyColleges = recommendations.colleges.filter((c: any) => c.distance_km !== null && c.distance_km <= 50);
+    if (nearbyColleges.length > 0) {
+      const topNearby = nearbyColleges.slice(0, 3).map((c: any) => `${c.name} (${c.distance_km} km)`).join(', ');
+      explanations.push(`📍 Based on your location (${locationName}), top nearby colleges: ${topNearby}`);
+    }
+  }
+  
   // Identify top skills and career types
   const skills = profile.skills;
   const topSkills = Object.entries(skills)
@@ -637,11 +717,16 @@ function generateExplanations(profile: AptitudeProfile, recommendations: any): s
   
   // College recommendations with location
   if (recommendations.colleges.length > 0) {
-    const locationMatches = recommendations.colleges.filter((c: any) => 
-      profile.preferred_locations.includes(c.state)
-    ).length;
-    const states = profile.preferred_locations.join(', ');
-    explanations.push(`🎓 ${locationMatches} colleges in ${states} matching your profile`);
+    if (profile.user_location?.latitude) {
+      const maxDist = profile.max_distance_km || 100;
+      explanations.push(`🎓 ${recommendations.colleges.length} colleges within ${maxDist} km matching your aptitude and preferences`);
+    } else {
+      const locationMatches = recommendations.colleges.filter((c: any) => 
+        profile.preferred_locations.includes(c.state)
+      ).length;
+      const states = profile.preferred_locations.join(', ');
+      explanations.push(`🎓 ${locationMatches} colleges in ${states} matching your profile`);
+    }
   }
   
   // Scholarship info with urgency

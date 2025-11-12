@@ -16,6 +16,13 @@ interface AptitudeProfile {
   preferred_locations: string[];
   academic_level: 'UG' | 'PG' | 'Diploma';
   score_percentile_or_band: number;
+  user_location?: {
+    latitude: number;
+    longitude: number;
+    city?: string;
+    state?: string;
+  };
+  max_distance_km?: number;
 }
 
 interface Scholarship {
@@ -55,6 +62,7 @@ interface College {
   description?: string;
   confidence_score: number;
   match_reason: string;
+  distance_km?: number | null;
 }
 
 interface Job {

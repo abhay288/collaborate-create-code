@@ -199,15 +199,20 @@ const OpportunityRecommendations = ({ data }: OpportunityRecommendationsProps) =
             >
               <CardHeader className="bg-gradient-to-r from-background to-muted/20">
                 <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-primary" />
-                      {college.name}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      📍 {college.city}, {college.state} {college.district && `(${college.district})`}
-                    </CardDescription>
-                  </div>
+                     <div className="flex-1">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5 text-primary" />
+                        {college.name}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        📍 {college.city}, {college.state} {college.district && `(${college.district})`}
+                        {college.distance_km && (
+                          <span className="ml-2 text-xs font-semibold text-primary">
+                            • {college.distance_km} km away
+                          </span>
+                        )}
+                      </CardDescription>
+                    </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-24 rounded-full bg-muted overflow-hidden">

@@ -121,7 +121,9 @@ export type Database = {
           established_year: number | null
           fees: number | null
           id: string
+          latitude: number | null
           location: string | null
+          longitude: number | null
           naac_grade: string | null
           rating: number | null
           s_no: number | null
@@ -144,7 +146,9 @@ export type Database = {
           established_year?: number | null
           fees?: number | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           naac_grade?: string | null
           rating?: number | null
           s_no?: number | null
@@ -167,7 +171,9 @@ export type Database = {
           established_year?: number | null
           fees?: number | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           naac_grade?: string | null
           rating?: number | null
           s_no?: number | null
@@ -705,6 +711,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_distance: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
+      }
       get_filtered_quiz_questions: {
         Args: { p_class_level: string; p_limit?: number; p_study_area: string }
         Returns: {
