@@ -167,6 +167,9 @@ async function fetchColleges(profile: AptitudeProfile, supabase: any) {
     // Fetch more colleges for distance-based filtering
     query = query.limit(100);
   }
+  
+  // Only fetch active colleges
+  query = query.eq('is_active', true);
 
   const { data: dbColleges, error } = await query;
 
@@ -175,23 +178,39 @@ async function fetchColleges(profile: AptitudeProfile, supabase: any) {
     return [];
   }
 
-  // Transform to required format
-  return (dbColleges || []).map((college: any) => ({
-    id: college.id,
-    name: college.name,
-    course: college.courses_offered?.[0] || 'Various courses',
-    city: college.location,
-    state: college.state || 'Uttar Pradesh',
-    district: college.district,
-    latitude: college.latitude,
-    longitude: college.longitude,
-    approx_fees: college.fees ? `₹${college.fees.toLocaleString()}` : 'Contact college',
-    admission_link: college.website || 'Contact college directly',
-    cutoff_info: college.cutoff_scores || 'Varies by course',
-    ranking_source: college.rating ? `Rating: ${college.rating}/5` : 'N/A',
-    last_checked: new Date().toISOString(),
-    description: college.description
-  }));
+  // Transform to required format with safe guards
+  return (dbColleges || [])
+    .filter((college: any) => {
+      // Filter out colleges without valid names
+      const collegeName = college?.college_name || college?.name;
+      return collegeName && typeof collegeName === 'string' && collegeName.trim().length > 0;
+    })
+    .map((college: any) => {
+      // Safe access to all fields
+      const collegeName = (college?.college_name || college?.name || 'Unknown College').trim();
+      const state = (college?.state || 'Unknown').trim();
+      const district = college?.district?.trim() || null;
+      const location = college?.location?.trim() || null;
+      
+      return {
+        id: college.id,
+        name: collegeName,
+        course: Array.isArray(college.courses_offered) && college.courses_offered.length > 0 
+          ? college.courses_offered[0] 
+          : 'Various courses',
+        city: location,
+        state: state,
+        district: district,
+        latitude: college.latitude,
+        longitude: college.longitude,
+        approx_fees: college.fees ? `₹${college.fees.toLocaleString()}` : 'Contact college',
+        admission_link: college.website || college.admission_link || 'Contact college directly',
+        cutoff_info: college.cutoff_scores || 'Varies by course',
+        ranking_source: college.rating ? `Rating: ${college.rating}/10` : 'N/A',
+        last_checked: new Date().toISOString(),
+        description: college.description || null
+      };
+    });
 }
 
 async function fetchJobs(profile: AptitudeProfile, supabase: any) {

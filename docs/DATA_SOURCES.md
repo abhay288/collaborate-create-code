@@ -1,240 +1,137 @@
-# AVSAR Data Sources & Verification Guide
+# Data Sources and Data Quality
 
-## Overview
-This document outlines the trusted data sources for scholarships, colleges, and job opportunities on the AVSAR platform. All data must be verified before being added to the system.
+## College Data
 
-## Trusted Sources
+### Sources
+- Government education portals
+- University websites
+- NAAC accreditation data
+- State education boards
 
-### Scholarships
+### Data Quality Standards
 
-#### Government Sources (Highest Priority)
-1. **National Scholarship Portal (NSP)**
-   - URL: https://scholarships.gov.in
-   - Domain: scholarships.gov.in
-   - Contains: Central and state government scholarships
-   - Update Frequency: Check monthly
-   - Verification: Official government portal
+#### Required Fields
+- **college_name**: Must be non-null, non-empty string (trimmed)
+- **state**: Defaults to 'Unknown' if not provided
 
-2. **UP Scholarship Portal**
-   - URL: https://scholarship.up.gov.in
-   - Domain: scholarship.up.gov.in
-   - Contains: Uttar Pradesh state scholarships
-   - Update Frequency: Check monthly
-   - Verification: Official state government portal
+#### Optional Fields (with validation)
+- **district**: Must be non-empty if provided
+- **location**: Can be empty string (default)
+- **college_type**: Must be non-empty if provided
+- **courses_offered**: Must be array (defaults to empty array)
+- **website**: Must be valid URL if provided
+- **rating**: Must be between 0-10 if provided
+- **fees**: Must be positive number if provided
 
-#### Aggregator Sources (Secondary)
-3. **Buddy4Study**
-   - URL: https://www.buddy4study.com
-   - Domain: buddy4study.com
-   - Contains: Government and private scholarships
-   - Update Frequency: Check bi-weekly
-   - Verification: Reputable scholarship aggregator
+### Data Integrity Constraints
 
-4. **Careers360**
-   - URL: https://www.careers360.com
-   - Domain: careers360.com
-   - Contains: Educational scholarships and opportunities
-   - Update Frequency: Check monthly
-   - Verification: Established education portal
+1. **CHECK Constraints**
+   - `college_name_not_empty`: Ensures name is not null or whitespace-only
+   - `state_not_empty`: Ensures state is not empty when provided
+   - `district_not_empty`: Ensures district is not empty when provided
 
-5. **Shiksha**
-   - URL: https://www.shiksha.com
-   - Domain: shiksha.com
-   - Contains: College and scholarship information
-   - Update Frequency: Check monthly
-   - Verification: Well-known education platform
+2. **Validation Trigger**
+   - `validate_college_data()`: Automatically trims whitespace and validates data on insert/update
+   - Sets empty strings to NULL for optional fields
+   - Ensures courses_offered is always an array
 
-### Colleges
+3. **Active Status**
+   - `is_active` boolean flag marks invalid records as inactive
+   - Only active colleges are shown to regular users
+   - Admins can view all colleges including inactive ones
 
-1. **Careers360 College Database**
-   - Comprehensive college listings
-   - Verified rankings and cutoffs
+### Data Cleanup Process
 
-2. **Shiksha College Directory**
-   - Detailed college information
-   - Student reviews and ratings
+The migration automatically:
+1. Marks colleges with NULL/empty names as inactive
+2. Attempts to fix 'Unknown College' entries by using location data
+3. Generates a data quality report showing:
+   - Count of inactive colleges
+   - Count of colleges with missing state/district
+   - Count of colleges with no courses
 
-3. **Official College Websites**
-   - Always prefer official sources
-   - Verify domain ownership
+### Manual Data Cleanup
 
-### Jobs & Internships
+To identify data quality issues:
 
-1. **Naukri.com**
-   - URL: https://www.naukri.com
-   - Focus: Entry-level to mid-career positions
-   - Verification: Check posting date (max 7 days old)
+```sql
+-- Find colleges with minimal information
+SELECT id, college_name, state, district, courses_offered
+FROM colleges
+WHERE is_active = true 
+  AND (
+    courses_offered IS NULL 
+    OR array_length(courses_offered, 1) IS NULL
+    OR district IS NULL
+  );
 
-2. **LinkedIn Jobs**
-   - URL: https://www.linkedin.com/jobs
-   - Focus: Professional opportunities
-   - Verification: Verify company profiles
+-- Find colleges with suspicious names
+SELECT id, college_name, state
+FROM colleges
+WHERE is_active = true
+  AND (
+    college_name ILIKE '%unknown%'
+    OR college_name ILIKE '%test%'
+    OR length(college_name) < 5
+  );
+```
 
-3. **Indeed**
-   - URL: https://www.indeed.com
-   - Focus: Various job levels
-   - Verification: Check posting date and company
+To mark colleges as inactive:
 
-## Data Verification Process
+```sql
+UPDATE colleges 
+SET is_active = false 
+WHERE id = '<college-id>';
+```
 
-### For Scholarships
+To reactivate after fixing data:
 
-1. **Initial Verification**
-   - Check official domain (e.g., .gov.in for government)
-   - Verify provider organization exists
-   - Confirm deadline is in the future
-   - Check eligibility criteria are clear
+```sql
+UPDATE colleges 
+SET is_active = true, 
+    college_name = 'Fixed Name',
+    district = 'Fixed District'
+WHERE id = '<college-id>';
+```
 
-2. **Content Verification**
-   - Amount/benefit details are specific
-   - Application link is working
-   - Required documents list is complete
-   - YouTube tutorial exists (if available)
+## Scholarship Data
 
-3. **Regular Updates**
-   - Check status monthly
-   - Update deadlines when extended
-   - Mark as 'closed' when deadline passes
-   - Verify 'coming_soon' scholarships
+### Sources
+- National Scholarship Portal
+- State scholarship schemes
+- Private organization scholarships
+- University scholarships
 
-### For Jobs
+### Verification Status
+All scholarships go through verification before being marked as `verified = true`.
 
-1. **Posting Recency**
-   - Only add jobs posted within last 7 days
-   - Verify posting date on source site
-   - Mark as inactive after 30 days
+## Career Data
 
-2. **Company Verification**
-   - Company exists and is legitimate
-   - Location details are specific
-   - Apply URL goes to job board or company career page
+### Sources
+- Job portals (Indeed, Naukri, LinkedIn)
+- Company career pages
+- Government job postings
 
-3. **Content Quality**
-   - Clear job role and responsibilities
-   - Realistic salary range
-   - Education requirements match target audience
-   - Required skills are specific
+### Data Refresh
+Career data is automatically refreshed weekly via the `refresh-data` edge function.
 
-### For Colleges
+## Data Update Schedule
 
-1. **Basic Verification**
-   - Official website exists and is active
-   - College is recognized (UGC/AICTE/State Board)
-   - Location and district are accurate
-   - Contact information is available
+- **Colleges**: Manual updates by admins, validated on insert/update
+- **Scholarships**: Weekly refresh via edge function
+- **Careers**: Weekly refresh via edge function
+- **Jobs**: Daily refresh for active postings
 
-2. **Data Accuracy**
-   - Course offerings are current
-   - Fee structure is recent (within 1 year)
-   - Cutoff scores are from latest admission cycle
-   - Ratings/rankings are from credible sources
+## Data Quality Monitoring
 
-## Admin Workflow
+### Key Metrics
+1. Percentage of colleges with complete information
+2. Number of inactive/invalid records
+3. Data freshness (last_updated timestamps)
+4. User-reported issues (via feedback system)
 
-### Adding New Scholarships
-
-1. Visit source website (NSP, Buddy4Study, UP Portal)
-2. Find active, open scholarships
-3. Copy exact information:
-   - Official name of scholarship
-   - Provider/sponsoring organization
-   - Eligibility criteria (verbatim)
-   - Amount and duration
-   - Application deadline
-   - Official application link
-4. Search YouTube for application tutorial:
-   - Search: "[Scholarship Name] application process"
-   - Prefer official or high-quality walkthrough videos
-   - Note: title, channel, URL
-5. In Admin Panel:
-   - Fill all required fields
-   - Set status as 'open'
-   - Add source URL for reference
-   - Specify target locations and academic levels
-6. Verify by clicking "Apply Now" link works
-
-### Adding New Jobs
-
-1. Check job boards (Naukri, LinkedIn, Indeed)
-2. Filter by:
-   - Posted within last 7 days
-   - Location: Uttar Pradesh or relevant
-   - Education: UG/PG/Diploma
-3. Copy details:
-   - Exact job title
-   - Company name
-   - Location (city, state)
-   - Salary range (if listed)
-   - Required skills
-   - Apply URL
-4. In Admin Panel:
-   - Fill all required fields
-   - Set posting date accurately
-   - Mark as active
-   - Add source site name
-5. Verify apply link redirects correctly
-
-### Monthly Maintenance Tasks
-
-1. **Scholarship Review**
-   - Check all 'open' scholarships for deadline status
-   - Update or close expired scholarships
-   - Add newly announced scholarships
-   - Verify application links still work
-
-2. **Job Review**
-   - Mark jobs older than 30 days as inactive
-   - Remove jobs older than 60 days
-   - Add fresh postings from last week
-
-3. **College Review**
-   - Update fee structures annually
-   - Refresh cutoff scores after admission cycles
-   - Verify website links are active
-   - Update course offerings if changed
-
-## Quality Standards
-
-### Required Fields
-All entries must have:
-- ✅ Name/Title
-- ✅ Provider/Company
-- ✅ Source reference
-- ✅ Official apply URL
-- ✅ Verified by (admin name)
-- ✅ Last checked date
-
-### Optional but Recommended
-- YouTube tutorial links
-- Detailed eligibility
-- Salary/amount ranges
-- Required documents list
-
-## Safety & Privacy
-
-### What NOT to Include
-- ❌ Personal contact numbers
-- ❌ Unofficial third-party links
-- ❌ Unverified or suspicious opportunities
-- ❌ Pay-to-apply schemes (except gov registration fees)
-- ❌ MLM or commission-based offers
-
-### Red Flags
-- Promises of guaranteed selection
-- Requests for payment before application
-- Poor grammar on official pages
-- No clear contact information
-- Suspicious domains
-
-## Support
-
-For questions about data verification or adding new sources:
-- Review this document
-- Check source website directly
-- Verify with official channels
-- When in doubt, don't add it
-
----
-
-**Last Updated**: January 2025
-**Document Owner**: AVSAR Admin Team
+### Error Reporting
+Users and admins should report data quality issues through:
+1. Admin dashboard feedback
+2. Direct database queries to identify patterns
+3. Application error logs

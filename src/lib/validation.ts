@@ -86,23 +86,72 @@ export function validateCollege(data: unknown): boolean {
 // Safe data parsing with defaults
 export function safeParseCollege(data: any) {
   try {
+    // Validate and sanitize college name - must be non-empty string
+    const rawName = data?.name || data?.college_name;
+    let collegeName = 'Unknown College';
+    
+    if (typeof rawName === 'string' && rawName.trim().length > 0) {
+      collegeName = rawName.trim();
+    }
+    
+    // Validate and sanitize state
+    let state = 'Unknown';
+    if (typeof data?.state === 'string' && data.state.trim().length > 0) {
+      state = data.state.trim();
+    }
+    
+    // Validate and sanitize district
+    let district = null;
+    if (typeof data?.district === 'string' && data.district.trim().length > 0) {
+      district = data.district.trim();
+    }
+    
+    // Validate and sanitize location
+    let location = null;
+    if (typeof data?.location === 'string' && data.location.trim().length > 0) {
+      location = data.location.trim();
+    }
+    
+    // Validate and sanitize college_type
+    let collegeType = null;
+    if (typeof data?.college_type === 'string' && data.college_type.trim().length > 0) {
+      collegeType = data.college_type.trim();
+    }
+    
     return {
       id: data?.id || null,
-      name: data?.name || data?.college_name || 'Unknown College',
-      state: data?.state || 'Unknown',
-      district: data?.district || null,
-      location: data?.location || null,
-      college_type: data?.college_type || null,
+      name: collegeName,
+      state: state,
+      district: district,
+      location: location,
+      college_type: collegeType,
       courses_offered: Array.isArray(data?.courses_offered) ? data.courses_offered : [],
       rating: typeof data?.rating === 'number' ? data.rating : null,
       fees: typeof data?.fees === 'number' ? data.fees : null,
       latitude: typeof data?.latitude === 'number' ? data.latitude : null,
-      longitude: typeof data?.longitude === 'number' ? data.longitude : null
+      longitude: typeof data?.longitude === 'number' ? data.longitude : null,
+      naac_grade: typeof data?.naac_grade === 'string' ? data.naac_grade.trim() : null,
+      established_year: typeof data?.established_year === 'number' ? data.established_year : null,
+      affiliation: typeof data?.affiliation === 'string' && data.affiliation.trim().length > 0 ? data.affiliation.trim() : null,
+      website: typeof data?.website === 'string' && data.website.trim().length > 0 ? data.website.trim() : null,
+      admission_link: typeof data?.admission_link === 'string' && data.admission_link.trim().length > 0 ? data.admission_link.trim() : null,
+      contact_info: typeof data?.contact_info === 'string' && data.contact_info.trim().length > 0 ? data.contact_info.trim() : null,
+      description: typeof data?.description === 'string' && data.description.trim().length > 0 ? data.description.trim() : null,
+      eligibility_criteria: typeof data?.eligibility_criteria === 'string' && data.eligibility_criteria.trim().length > 0 ? data.eligibility_criteria.trim() : null,
+      is_active: typeof data?.is_active === 'boolean' ? data.is_active : true
     };
   } catch (error) {
-    console.error('Error parsing college data:', error);
+    console.error('Error parsing college data:', error, data);
     return null;
   }
+}
+
+// Safe string access with lowercase
+export function safeStringToLower(value: any): string {
+  if (typeof value === 'string' && value.length > 0) {
+    return value.toLowerCase();
+  }
+  return '';
 }
 
 // Sanitize string input

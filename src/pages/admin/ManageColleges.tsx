@@ -114,22 +114,33 @@ const ManageColleges = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate college name is not empty
+    const trimmedName = formData.college_name.trim();
+    if (!trimmedName || trimmedName.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'College name is required and cannot be empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const collegeData = {
-      college_name: formData.college_name,
-      location: formData.location,
-      district: formData.district,
-      state: formData.state,
-      college_type: formData.college_type || null,
-      website: formData.website || null,
-      affiliation: formData.affiliation || null,
-      eligibility_criteria: formData.eligibility_criteria || null,
-      naac_grade: formData.naac_grade || null,
-      description: formData.description || null,
+      college_name: trimmedName,
+      location: formData.location.trim() || '',
+      district: formData.district || null,
+      state: formData.state.trim() || 'Unknown',
+      college_type: formData.college_type.trim() || null,
+      website: formData.website.trim() || null,
+      affiliation: formData.affiliation.trim() || null,
+      eligibility_criteria: formData.eligibility_criteria.trim() || null,
+      naac_grade: formData.naac_grade.trim() || null,
+      description: formData.description.trim() || null,
       fees: formData.fees ? parseFloat(formData.fees) : null,
       rating: formData.rating ? parseFloat(formData.rating) : null,
-      courses_offered: formData.courses_offered ? formData.courses_offered.split(',').map(c => c.trim()) : null,
-      contact_info: formData.contact_info || null,
-      admission_link: formData.admission_link || null
+      courses_offered: formData.courses_offered ? formData.courses_offered.split(',').map(c => c.trim()).filter(c => c.length > 0) : [],
+      contact_info: formData.contact_info.trim() || null,
+      admission_link: formData.admission_link.trim() || null
     };
 
     if (editingCollege) {

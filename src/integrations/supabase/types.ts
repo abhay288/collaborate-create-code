@@ -121,6 +121,7 @@ export type Database = {
           established_year: number | null
           fees: number | null
           id: string
+          is_active: boolean | null
           latitude: number | null
           location: string | null
           longitude: number | null
@@ -146,6 +147,7 @@ export type Database = {
           established_year?: number | null
           fees?: number | null
           id?: string
+          is_active?: boolean | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -171,6 +173,7 @@ export type Database = {
           established_year?: number | null
           fees?: number | null
           id?: string
+          is_active?: boolean | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
