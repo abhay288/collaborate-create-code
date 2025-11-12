@@ -103,6 +103,14 @@ const AdminDashboard = () => {
       link: '/admin/quiz-questions',
       stat: 'Dynamic Tests',
       color: 'text-indigo-600'
+    },
+    {
+      title: 'ML Feedback Analytics',
+      description: 'View user feedback and train recommendation models',
+      icon: TrendingUp,
+      link: '/admin/feedback-analytics',
+      stat: 'AI-Powered',
+      color: 'text-purple-600'
     }
   ];
 
