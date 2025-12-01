@@ -29,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface College {
   id: string;
-  college_name: string;
+  college_name: string | null;
   s_no: number | null;
   state: string | null;
   district: string | null;
@@ -38,7 +38,6 @@ interface College {
   affiliation: string | null;
   eligibility_criteria: string | null;
   naac_grade: string | null;
-  description: string | null;
   fees: number | null;
   rating: number | null;
   courses_offered: string[] | null;
@@ -46,7 +45,8 @@ interface College {
   admission_link: string | null;
   location: string | null;
   cutoff_scores: any | null;
-  established_year: number | null;
+  established_year: string | null;
+  is_active: boolean | null;
 }
 
 const UP_DISTRICTS = [
@@ -80,7 +80,6 @@ const ManageColleges = () => {
     affiliation: '',
     eligibility_criteria: '',
     naac_grade: '',
-    description: '',
     fees: '',
     rating: '',
     courses_offered: '',
@@ -97,7 +96,7 @@ const ManageColleges = () => {
     const { data, error } = await supabase
       .from('colleges')
       .select('*')
-      .order('name');
+      .order('college_name');
 
     if (error) {
       toast({
@@ -106,7 +105,7 @@ const ManageColleges = () => {
         variant: 'destructive',
       });
     } else {
-      setColleges(data || []);
+      setColleges((data || []) as College[]);
     }
     setLoading(false);
   };
@@ -135,7 +134,6 @@ const ManageColleges = () => {
       affiliation: formData.affiliation.trim() || null,
       eligibility_criteria: formData.eligibility_criteria.trim() || null,
       naac_grade: formData.naac_grade.trim() || null,
-      description: formData.description.trim() || null,
       fees: formData.fees ? parseFloat(formData.fees) : null,
       rating: formData.rating ? parseFloat(formData.rating) : null,
       courses_offered: formData.courses_offered ? formData.courses_offered.split(',').map(c => c.trim()).filter(c => c.length > 0) : [],
@@ -182,7 +180,7 @@ const ManageColleges = () => {
   const handleEdit = (college: College) => {
     setEditingCollege(college);
     setFormData({
-      college_name: college.college_name,
+      college_name: college.college_name || '',
       location: college.location || '',
       district: college.district || '',
       state: college.state || 'Uttar Pradesh',
@@ -191,7 +189,6 @@ const ManageColleges = () => {
       affiliation: college.affiliation || '',
       eligibility_criteria: college.eligibility_criteria || '',
       naac_grade: college.naac_grade || '',
-      description: college.description || '',
       fees: college.fees?.toString() || '',
       rating: college.rating?.toString() || '',
       courses_offered: college.courses_offered?.join(', ') || '',
@@ -232,7 +229,6 @@ const ManageColleges = () => {
       affiliation: '',
       eligibility_criteria: '',
       naac_grade: '',
-      description: '',
       fees: '',
       rating: '',
       courses_offered: '',
@@ -362,15 +358,6 @@ const ManageColleges = () => {
                       value={formData.courses_offered}
                       onChange={(e) => setFormData({ ...formData, courses_offered: e.target.value })}
                       placeholder="B.Tech, MBA, BBA"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={4}
                     />
                   </div>
                 </div>

@@ -107,81 +107,96 @@ export type Database = {
       }
       colleges: {
         Row: {
+          added_in_survey: string | null
+          address: string | null
           admission_link: string | null
           affiliation: string | null
-          college_name: string
+          college_name: string | null
           college_type: string | null
           contact_info: string | null
           courses_offered: string[] | null
           created_at: string
           cutoff_scores: Json | null
-          description: string | null
           district: string | null
           eligibility_criteria: string | null
-          established_year: number | null
+          established_year: string | null
           fees: number | null
           id: string
           is_active: boolean | null
           latitude: number | null
           location: string | null
           longitude: number | null
+          management: string | null
           naac_grade: string | null
           rating: number | null
           s_no: number | null
+          specialised_in: string | null
           state: string | null
+          university_type: string | null
           updated_at: string
+          uploaded_year: string | null
           website: string | null
         }
         Insert: {
+          added_in_survey?: string | null
+          address?: string | null
           admission_link?: string | null
           affiliation?: string | null
-          college_name: string
+          college_name?: string | null
           college_type?: string | null
           contact_info?: string | null
           courses_offered?: string[] | null
           created_at?: string
           cutoff_scores?: Json | null
-          description?: string | null
           district?: string | null
           eligibility_criteria?: string | null
-          established_year?: number | null
+          established_year?: string | null
           fees?: number | null
           id?: string
           is_active?: boolean | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          management?: string | null
           naac_grade?: string | null
           rating?: number | null
           s_no?: number | null
+          specialised_in?: string | null
           state?: string | null
+          university_type?: string | null
           updated_at?: string
+          uploaded_year?: string | null
           website?: string | null
         }
         Update: {
+          added_in_survey?: string | null
+          address?: string | null
           admission_link?: string | null
           affiliation?: string | null
-          college_name?: string
+          college_name?: string | null
           college_type?: string | null
           contact_info?: string | null
           courses_offered?: string[] | null
           created_at?: string
           cutoff_scores?: Json | null
-          description?: string | null
           district?: string | null
           eligibility_criteria?: string | null
-          established_year?: number | null
+          established_year?: string | null
           fees?: number | null
           id?: string
           is_active?: boolean | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          management?: string | null
           naac_grade?: string | null
           rating?: number | null
           s_no?: number | null
+          specialised_in?: string | null
           state?: string | null
+          university_type?: string | null
           updated_at?: string
+          uploaded_year?: string | null
           website?: string | null
         }
         Relationships: []
