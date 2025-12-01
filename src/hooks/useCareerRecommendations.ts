@@ -28,14 +28,15 @@ export const useCareerRecommendations = () => {
 
   const generateRecommendations = async (
     quizSessionId: string, 
-    responses: QuizResponse[]
+    responses: QuizResponse[],
+    userId?: string
   ) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke(
         'generate-career-recommendations',
         {
-          body: { quizSessionId, responses }
+          body: { quizSessionId, responses, userId }
         }
       );
 
