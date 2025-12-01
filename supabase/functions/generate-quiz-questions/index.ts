@@ -43,6 +43,90 @@ function mapStudyArea(studyArea: string): string {
   return mapping[lowerArea] || studyArea;
 }
 
+// Valid quiz_category enum values from database
+const VALID_CATEGORIES = [
+  'logical_reasoning',
+  'analytical_skills', 
+  'creativity',
+  'technical_interests',
+  'quantitative',
+  'verbal',
+  'interpersonal'
+] as const;
+
+// Map AI-generated category names to valid DB enum values
+function mapCategoryToEnum(category: string): string {
+  const categoryMapping: Record<string, string> = {
+    // Direct matches
+    'logical_reasoning': 'logical_reasoning',
+    'analytical_skills': 'analytical_skills',
+    'creativity': 'creativity',
+    'technical_interests': 'technical_interests',
+    'quantitative': 'quantitative',
+    'verbal': 'verbal',
+    'interpersonal': 'interpersonal',
+    // Common AI variations
+    'logical': 'logical_reasoning',
+    'logic': 'logical_reasoning',
+    'reasoning': 'logical_reasoning',
+    'analytical': 'analytical_skills',
+    'analysis': 'analytical_skills',
+    'critical_thinking': 'analytical_skills',
+    'creative': 'creativity',
+    'innovation': 'creativity',
+    'technical': 'technical_interests',
+    'technology': 'technical_interests',
+    'computational': 'technical_interests',
+    'math': 'quantitative',
+    'mathematical': 'quantitative',
+    'numerical': 'quantitative',
+    'language': 'verbal',
+    'communication': 'verbal',
+    'linguistic': 'verbal',
+    'social': 'interpersonal',
+    'emotional': 'interpersonal',
+    'teamwork': 'interpersonal',
+    'collaboration': 'interpersonal',
+    // Fallbacks
+    'general': 'logical_reasoning',
+    'other': 'logical_reasoning',
+  };
+  
+  const normalizedCategory = category?.toLowerCase()?.trim() || '';
+  const mapped = categoryMapping[normalizedCategory];
+  
+  if (mapped) {
+    return mapped;
+  }
+  
+  // Try partial matching as last resort
+  if (normalizedCategory.includes('logic') || normalizedCategory.includes('reason')) {
+    return 'logical_reasoning';
+  }
+  if (normalizedCategory.includes('analy') || normalizedCategory.includes('critical')) {
+    return 'analytical_skills';
+  }
+  if (normalizedCategory.includes('creat') || normalizedCategory.includes('innov')) {
+    return 'creativity';
+  }
+  if (normalizedCategory.includes('tech') || normalizedCategory.includes('comput')) {
+    return 'technical_interests';
+  }
+  if (normalizedCategory.includes('quant') || normalizedCategory.includes('math') || normalizedCategory.includes('numer')) {
+    return 'quantitative';
+  }
+  if (normalizedCategory.includes('verbal') || normalizedCategory.includes('lang') || normalizedCategory.includes('commun')) {
+    return 'verbal';
+  }
+  if (normalizedCategory.includes('inter') || normalizedCategory.includes('social') || normalizedCategory.includes('team')) {
+    return 'interpersonal';
+  }
+  
+  // Default fallback
+  console.warn(`Unknown category "${category}", defaulting to logical_reasoning`);
+  return 'logical_reasoning';
+}
+
 // Deterministic seeding for debugging
 function seedRandom(seed: number) {
   let state = seed;
@@ -219,11 +303,11 @@ CRITICAL REQUIREMENTS:
 4. Progressive difficulty (easy → medium → hard)
 ${profile.interests ? `5. Incorporate student interests where relevant: ${profile.interests.join(', ')}` : ''}
 
-Categories (aim for 2-3 questions per category):
-- logical: Pattern recognition, deductive reasoning
-- analytical: Problem decomposition, critical thinking
-- creative: Innovation, out-of-box thinking
-- technical: Technology aptitude, computational thinking
+Categories (MUST use these exact category names):
+- logical_reasoning: Pattern recognition, deductive reasoning
+- analytical_skills: Problem decomposition, critical thinking
+- creativity: Innovation, out-of-box thinking
+- technical_interests: Technology aptitude, computational thinking
 - quantitative: Mathematical reasoning, numerical ability
 - verbal: Language comprehension, communication
 - interpersonal: Emotional intelligence, teamwork scenarios
@@ -252,7 +336,7 @@ Return ONLY a JSON array with this exact structure (no markdown, no extra text):
 [
   {
     "question_text": "Question here",
-    "category": "logical|analytical|creative|technical|quantitative|verbal|interpersonal",
+    "category": "logical_reasoning|analytical_skills|creativity|technical_interests|quantitative|verbal|interpersonal",
     "options": [
       {"text": "Option 1", "points": 1},
       {"text": "Option 2", "points": 3},
@@ -416,9 +500,13 @@ VALIDATION:
 
     const questionsToInsert = shuffledQuestions.map((q: any, index: number) => {
       try {
+        // Map AI category to valid DB enum value
+        const mappedCategory = mapCategoryToEnum(q.category);
+        console.log(`Question ${index + 1}: "${q.category}" -> "${mappedCategory}"`);
+        
         return {
           question_text: q.question_text?.trim() || `Question ${index + 1}`,
-          category: q.category?.toLowerCase() || 'general',
+          category: mappedCategory,
           options: q.options || [],
           target_class_levels: Array.isArray(q.target_class_levels) ? q.target_class_levels : [profile.class_level],
           target_study_areas: Array.isArray(q.target_study_areas) ? q.target_study_areas : [profile.study_area],
