@@ -65,13 +65,13 @@ serve(async (req) => {
       throw new Error('responses must contain between 1 and 100 items');
     }
     
-    // Validate each response structure
+    // Validate each response structure (matches frontend format)
     for (const response of requestData.responses) {
       if (!response.category || typeof response.category !== 'string') {
         throw new Error('Each response must have a valid category');
       }
-      if (typeof response.isCorrect !== 'boolean') {
-        throw new Error('Each response must have an isCorrect boolean');
+      if (typeof response.points_earned !== 'number') {
+        throw new Error('Each response must have points_earned');
       }
       if (response.category.length > 100) {
         throw new Error('Category must be less than 100 characters');
@@ -80,28 +80,28 @@ serve(async (req) => {
     
     const { quizSessionId, responses } = requestData;
 
-    // Analyze quiz responses to determine category strengths
+    // Analyze quiz responses to determine category strengths using points
     const categoryScores = responses.reduce((acc: any, response: any) => {
       const category = response.category?.toLowerCase() || 'general';
       if (!acc[category]) {
-        acc[category] = { correct: 0, total: 0 };
+        acc[category] = { points: 0, total: 0, maxPoints: 0 };
       }
       acc[category].total++;
-      if (response.isCorrect) {
-        acc[category].correct++;
-      }
+      acc[category].points += response.points_earned || 0;
+      acc[category].maxPoints += 5; // Max points per question
       return acc;
     }, {});
 
-    // Calculate percentages and create deterministic profile
+    // Calculate percentages based on points earned
     const profile = Object.entries(categoryScores)
       .map(([category, scores]: any) => ({
         category,
-        score: Math.round((scores.correct / scores.total) * 100), // Round for consistency
-        correct: scores.correct,
+        score: Math.round((scores.points / scores.maxPoints) * 100),
+        points: scores.points,
+        maxPoints: scores.maxPoints,
         total: scores.total
       }))
-      .sort((a, b) => b.score - a.score); // Sort by score for consistency
+      .sort((a, b) => b.score - a.score);
 
     // Log for reproducibility verification
     console.log('Profile generated:', JSON.stringify(profile, null, 2));
@@ -118,7 +118,7 @@ serve(async (req) => {
 
     // Create AI prompt based on category scores with deterministic formatting
     const promptData = profile
-      .map(p => `${p.category}: ${p.score}% (${p.correct}/${p.total})`)
+      .map(p => `${p.category}: ${p.score}% (${p.points}/${p.maxPoints} pts)`)
       .join(', ');
     
     console.log('Generating recommendations for:', promptData);
