@@ -86,12 +86,20 @@ export function validateCollege(data: unknown): boolean {
 // Safe data parsing with defaults
 export function safeParseCollege(data: any) {
   try {
+    if (!data) return null;
+    
     // Validate and sanitize college name - must be non-empty string
-    const rawName = data?.name || data?.college_name;
+    const rawName = data?.college_name || data?.name;
     let collegeName = 'Unknown College';
     
     if (typeof rawName === 'string' && rawName.trim().length > 0) {
       collegeName = rawName.trim();
+    }
+    
+    // Skip colleges without a valid name
+    if (collegeName === 'Unknown College') {
+      console.warn('Skipping college with no name:', data?.id);
+      return null;
     }
     
     // Validate and sanitize state
@@ -118,25 +126,35 @@ export function safeParseCollege(data: any) {
       collegeType = data.college_type.trim();
     }
     
+    // Handle established_year as string or number
+    let establishedYear = null;
+    if (data?.established_year) {
+      if (typeof data.established_year === 'number') {
+        establishedYear = data.established_year.toString();
+      } else if (typeof data.established_year === 'string' && data.established_year.trim().length > 0) {
+        establishedYear = data.established_year.trim();
+      }
+    }
+    
     return {
       id: data?.id || null,
       name: collegeName,
+      college_name: collegeName, // Keep both for compatibility
       state: state,
       district: district,
       location: location,
       college_type: collegeType,
-      courses_offered: Array.isArray(data?.courses_offered) ? data.courses_offered : [],
+      courses_offered: Array.isArray(data?.courses_offered) ? data.courses_offered.filter(Boolean) : [],
       rating: typeof data?.rating === 'number' ? data.rating : null,
       fees: typeof data?.fees === 'number' ? data.fees : null,
       latitude: typeof data?.latitude === 'number' ? data.latitude : null,
       longitude: typeof data?.longitude === 'number' ? data.longitude : null,
-      naac_grade: typeof data?.naac_grade === 'string' ? data.naac_grade.trim() : null,
-      established_year: typeof data?.established_year === 'number' ? data.established_year : null,
+      naac_grade: typeof data?.naac_grade === 'string' && data.naac_grade.trim() ? data.naac_grade.trim() : null,
+      established_year: establishedYear,
       affiliation: typeof data?.affiliation === 'string' && data.affiliation.trim().length > 0 ? data.affiliation.trim() : null,
       website: typeof data?.website === 'string' && data.website.trim().length > 0 ? data.website.trim() : null,
       admission_link: typeof data?.admission_link === 'string' && data.admission_link.trim().length > 0 ? data.admission_link.trim() : null,
       contact_info: typeof data?.contact_info === 'string' && data.contact_info.trim().length > 0 ? data.contact_info.trim() : null,
-      description: typeof data?.description === 'string' && data.description.trim().length > 0 ? data.description.trim() : null,
       eligibility_criteria: typeof data?.eligibility_criteria === 'string' && data.eligibility_criteria.trim().length > 0 ? data.eligibility_criteria.trim() : null,
       is_active: typeof data?.is_active === 'boolean' ? data.is_active : true
     };
