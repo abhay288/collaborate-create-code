@@ -20,10 +20,13 @@ export default function Colleges() {
   const [selectedCourse, setSelectedCourse] = useState("All");
   const [sortBy, setSortBy] = useState("rating");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 24; // Increased from 12 for better browsing
   
-  const { colleges, loading } = useColleges();
+  const { colleges, loading, totalCount } = useColleges();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+
+  // Show total count for debugging
+  console.log(`[Colleges] Loaded ${colleges.length} colleges out of ${totalCount} total`);
 
   const toggleFavorite = async (itemId: string) => {
     if (isFavorite('college', itemId)) {
