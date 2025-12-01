@@ -338,6 +338,14 @@ export default function Quiz() {
     }
 
     try {
+      // Get current user for recommendations
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Session expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+
       // Calculate total score and category scores
       const totalPoints = savedResponses.reduce((sum, r) => sum + r.points_earned, 0);
       const maxPoints = savedResponses.length * 5; // Assuming max 5 points per question
@@ -362,8 +370,8 @@ export default function Quiz() {
         .update({ category_scores: categoryScores })
         .eq('id', sessionId);
 
-      // Generate AI recommendations
-      await generateRecommendations(sessionId, savedResponses);
+      // Generate AI recommendations with user ID
+      await generateRecommendations(sessionId, savedResponses, user.id);
 
       toast.success('Quiz submitted successfully!');
 

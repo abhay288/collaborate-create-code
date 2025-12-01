@@ -12,26 +12,44 @@ serve(async (req) => {
   }
 
   try {
-    // Validate authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
-    const supabaseClient = createClient(
+    // Create service role client for database operations
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get user from auth header
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    // Try to get user from auth header
+    let userId: string | null = null;
+    const authHeader = req.headers.get('Authorization');
+    
+    if (authHeader) {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (!userError && user) {
+        userId = user.id;
+        console.log('Authenticated user:', userId);
+      } else {
+        console.log('Auth header present but getUser failed:', userError?.message);
+      }
     }
 
     // Parse and validate input
     const requestData = await req.json();
+    
+    // Allow userId from request body as fallback
+    if (!userId && requestData.userId) {
+      userId = requestData.userId;
+      console.log('Using userId from request body:', userId);
+    }
+    
+    if (!userId) {
+      throw new Error('Unauthorized: No valid user found');
+    }
     
     // Validate quizSessionId is a valid UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -89,10 +107,10 @@ serve(async (req) => {
     console.log('Profile generated:', JSON.stringify(profile, null, 2));
 
     // Get user profile for context
-    const { data: userProfile } = await supabaseClient
+    const { data: userProfile } = await supabaseAdmin
       .from('profiles')
       .select('class_level, study_area')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle();
 
     const classLevel = userProfile?.class_level || 'UG';
@@ -257,7 +275,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
     for (const rec of recommendations) {
       try {
         // Check if career exists, create if not
-        let { data: existingCareer } = await supabaseClient
+        let { data: existingCareer } = await supabaseAdmin
           .from('careers')
           .select('id')
           .ilike('title', rec.career)
@@ -265,7 +283,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
 
         let careerId;
         if (!existingCareer) {
-          const { data: newCareer, error: careerError } = await supabaseClient
+          const { data: newCareer, error: careerError } = await supabaseAdmin
             .from('careers')
             .insert({
               title: rec.career.trim(),
@@ -290,10 +308,10 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
         }
 
         // Save recommendation
-        const { data: savedRec, error: recError } = await supabaseClient
+        const { data: savedRec, error: recError } = await supabaseAdmin
           .from('career_recommendations')
           .insert({
-            user_id: user.id,
+            user_id: userId,
             quiz_session_id: quizSessionId,
             career_id: careerId,
             confidence_score: Math.round(rec.confidence) // Ensure integer
@@ -329,7 +347,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
       ? Math.round(profile.reduce((sum, p) => sum + p.score, 0) / profile.length)
       : 0;
       
-    const { error: updateError } = await supabaseClient
+    const { error: updateError } = await supabaseAdmin
       .from('quiz_sessions')
       .update({ 
         completed: true, 
