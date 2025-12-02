@@ -346,10 +346,16 @@ export default function Quiz() {
         return;
       }
 
+      console.log('[Quiz] Starting submission flow...');
+      console.log('[Quiz] Session ID:', sessionId);
+      console.log('[Quiz] Saved responses:', savedResponses.length);
+
       // Calculate total score and category scores
       const totalPoints = savedResponses.reduce((sum, r) => sum + r.points_earned, 0);
       const maxPoints = savedResponses.length * 5; // Assuming max 5 points per question
       const score = Math.round((totalPoints / maxPoints) * 100);
+
+      console.log('[Quiz] Calculated score:', score, `(${totalPoints}/${maxPoints})`);
 
       // Calculate category-wise scores
       const categoryScores: Record<string, { total: number; max: number }> = {};
@@ -361,24 +367,39 @@ export default function Quiz() {
         categoryScores[response.category].max += 5;
       });
 
+      console.log('[Quiz] Category scores:', categoryScores);
+
       // Complete the session with category scores
       await completeSession(sessionId, score);
       
       // Update session with category scores
-      await supabase
+      const { error: updateError } = await supabase
         .from('quiz_sessions')
         .update({ category_scores: categoryScores })
         .eq('id', sessionId);
 
-      // Generate AI recommendations with user ID
-      await generateRecommendations(sessionId, savedResponses, user.id);
+      if (updateError) {
+        console.error('[Quiz] Error updating category scores:', updateError);
+      }
 
-      toast.success('Quiz submitted successfully!');
+      console.log('[Quiz] Session completed, generating recommendations...');
+
+      // Generate AI recommendations with user ID
+      toast.info('Generating personalized career recommendations...', { duration: 3000 });
+      
+      try {
+        const result = await generateRecommendations(sessionId, savedResponses, user.id);
+        console.log('[Quiz] Recommendations generated:', result);
+        toast.success('Quiz submitted and recommendations generated!');
+      } catch (recError) {
+        console.error('[Quiz] Error generating recommendations:', recError);
+        toast.error('Quiz saved but recommendation generation failed. You can view partial results.');
+      }
 
       // Navigate to results with session ID
       navigate(`/quiz/results?session=${sessionId}`);
     } catch (error) {
-      console.error('Error submitting quiz:', error);
+      console.error('[Quiz] Error submitting quiz:', error);
       toast.error('Failed to submit quiz. Please try again.');
     }
   };
@@ -476,7 +497,8 @@ export default function Quiz() {
           </CardHeader>
           <CardContent>
             <RadioGroup
-              value={selectedAnswer?.toString()}
+              key={currentQuestionData.id}
+              value={selectedAnswer !== undefined ? selectedAnswer.toString() : ""}
               onValueChange={(value) => handleAnswerSelect(parseInt(value))}
             >
               <div className="space-y-3">
@@ -485,16 +507,19 @@ export default function Quiz() {
                   const isSelected = selectedAnswer === index;
                   return (
                     <div
-                      key={index}
+                      key={`${currentQuestionData.id}-opt-${index}`}
                       className={`flex items-center space-x-3 border-2 rounded-lg p-4 transition-all duration-300 cursor-pointer
                         ${isSelected 
                           ? 'bg-gradient-to-r from-primary/10 to-accent/10 border-primary shadow-lg scale-105' 
                           : 'border-muted hover:border-primary/50 hover:bg-accent/20 hover:scale-102'
                         }`}
                     >
-                      <RadioGroupItem value={index.toString()} id={`option-${index}`} />
+                      <RadioGroupItem 
+                        value={index.toString()} 
+                        id={`${currentQuestionData.id}-option-${index}`} 
+                      />
                       <Label
-                        htmlFor={`option-${index}`}
+                        htmlFor={`${currentQuestionData.id}-option-${index}`}
                         className="flex-1 cursor-pointer font-normal"
                       >
                         {optionText}

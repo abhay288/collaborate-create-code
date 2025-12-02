@@ -348,37 +348,61 @@ export default function QuizResults() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {recommendations.length > 0 ? (
-                  recommendations.map((career: any, index: number) => (
-                    <Card key={index} className="border-2">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-xl">{career.career_title}</CardTitle>
-                            <CardDescription className="mt-2">{career.description}</CardDescription>
+                  recommendations.map((rec: any, index: number) => {
+                    const career = rec.careers || {};
+                    const title = career.title || rec.career_title || 'Career Path';
+                    const description = career.description || rec.description || '';
+                    const requirements = career.requirements || rec.requirements || '';
+                    const confidenceScore = rec.confidence_score || 0;
+                    const branch = rec.branch;
+                    
+                    return (
+                      <Card key={rec.id || index} className="border-2 hover:border-primary/50 transition-all">
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <CardTitle className="text-xl">{title}</CardTitle>
+                              {branch && (
+                                <Badge variant="outline" className="mt-2 mr-2">
+                                  Specialization: {branch}
+                                </Badge>
+                              )}
+                              <CardDescription className="mt-2">{description}</CardDescription>
+                            </div>
+                            <Badge 
+                              className="text-lg px-3 py-1 shrink-0"
+                              variant={confidenceScore >= 80 ? "default" : confidenceScore >= 60 ? "secondary" : "outline"}
+                            >
+                              {confidenceScore}% Match
+                            </Badge>
                           </div>
-                          <Badge className="text-lg px-3 py-1">{career.confidence_score}% Match</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {career.requirements && (
-                            <div>
-                              <h5 className="font-semibold text-sm mb-2">Key Requirements:</h5>
-                              <div className="flex flex-wrap gap-2">
-                                {career.requirements.split(',').map((req: string, i: number) => (
-                                  <Badge key={i} variant="secondary">{req.trim()}</Badge>
-                                ))}
+                        </CardHeader>
+                        {requirements && (
+                          <CardContent>
+                            <div className="space-y-3">
+                              <div>
+                                <h5 className="font-semibold text-sm mb-2">Key Requirements:</h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {requirements.split(',').map((req: string, i: number) => (
+                                    <Badge key={i} variant="secondary">{req.trim()}</Badge>
+                                  ))}
+                                </div>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                          </CardContent>
+                        )}
+                      </Card>
+                    );
+                  })
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    No AI career recommendations available yet
-                  </p>
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">
+                      No AI career recommendations available yet.
+                    </p>
+                    <Button variant="outline" onClick={() => navigate('/quiz')}>
+                      Take the Quiz
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>

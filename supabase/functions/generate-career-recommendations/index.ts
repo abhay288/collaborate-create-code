@@ -12,6 +12,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[RecommendationEngine] Starting recommendation generation...');
+    
     // Create service role client for database operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,19 +34,20 @@ serve(async (req) => {
       const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
       if (!userError && user) {
         userId = user.id;
-        console.log('Authenticated user:', userId);
+        console.log('[RecommendationEngine] Authenticated user:', userId);
       } else {
-        console.log('Auth header present but getUser failed:', userError?.message);
+        console.log('[RecommendationEngine] Auth header present but getUser failed:', userError?.message);
       }
     }
 
     // Parse and validate input
     const requestData = await req.json();
+    console.log('[RecommendationEngine] Request data:', JSON.stringify(requestData, null, 2));
     
     // Allow userId from request body as fallback
     if (!userId && requestData.userId) {
       userId = requestData.userId;
-      console.log('Using userId from request body:', userId);
+      console.log('[RecommendationEngine] Using userId from request body:', userId);
     }
     
     if (!userId) {
@@ -79,6 +82,8 @@ serve(async (req) => {
     }
     
     const { quizSessionId, responses } = requestData;
+    console.log('[RecommendationEngine] Processing quiz session:', quizSessionId);
+    console.log('[RecommendationEngine] Responses count:', responses.length);
 
     // Analyze quiz responses to determine category strengths using points
     const categoryScores = responses.reduce((acc: any, response: any) => {
@@ -103,25 +108,29 @@ serve(async (req) => {
       }))
       .sort((a, b) => b.score - a.score);
 
-    // Log for reproducibility verification
-    console.log('Profile generated:', JSON.stringify(profile, null, 2));
+    console.log('[RecommendationEngine] Aptitude profile:', JSON.stringify(profile, null, 2));
 
     // Get user profile for context
     const { data: userProfile } = await supabaseAdmin
       .from('profiles')
-      .select('class_level, study_area')
+      .select('class_level, study_area, preferred_state, preferred_district, interests')
       .eq('id', userId)
       .maybeSingle();
 
+    console.log('[RecommendationEngine] User profile:', userProfile);
+
     const classLevel = userProfile?.class_level || 'UG';
     const studyArea = userProfile?.study_area || 'All';
+    const userState = userProfile?.preferred_state || null;
+    const userDistrict = userProfile?.preferred_district || null;
+    const interests = userProfile?.interests || [];
 
     // Create AI prompt based on category scores with deterministic formatting
     const promptData = profile
       .map(p => `${p.category}: ${p.score}% (${p.points}/${p.maxPoints} pts)`)
       .join(', ');
     
-    console.log('Generating recommendations for:', promptData);
+    console.log('[RecommendationEngine] Generating recommendations for:', promptData);
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -140,7 +149,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a career counselor AI. Based on aptitude test scores, recommend exactly 5 suitable careers.
+            content: `You are a career counselor AI specializing in Indian education system. Based on aptitude test scores, recommend suitable courses and careers.
 
 SCORING GUIDE:
 - 80-100%: Exceptional strength
@@ -148,26 +157,27 @@ SCORING GUIDE:
 - 40-59%: Moderate capability
 - Below 40%: Area for development
 
-CAREER MATCHING RULES:
-- Technical + Logical high → Engineering, Software, IT
-- Quantitative + Analytical high → Finance, Data Science, Research
-- Creative + Verbal high → Design, Writing, Marketing
-- Interpersonal + Verbal high → Management, HR, Teaching
-- Match careers to demonstrated strengths, not wishful thinking
+CAREER MATCHING RULES FOR INDIAN STUDENTS:
+- Technical + Logical high → B.Tech/B.E. in CSE, IT, ECE, Mechanical
+- Quantitative + Analytical high → B.Com, CA, BBA, Economics
+- Creative + Verbal high → Design (BDes), Mass Communication, Journalism
+- Interpersonal + Verbal high → Management, HR, Teaching, Law
+- Science stream + high technical → Engineering, Medical, Research
+- Commerce stream + high quantitative → CA, CFA, MBA
 
-Confidence scores should reflect:
-- 80-100: Perfect match (top 2 skills align strongly)
-- 60-79: Good match (1-2 relevant strengths)
-- 40-59: Possible match (some alignment)
-
-Be honest and data-driven. Return structured JSON only.`
+Be specific to Indian education context. Return structured JSON only.`
           },
           {
             role: 'user',
-            content: `Student Profile - ${classLevel} Level, ${studyArea} Stream
+            content: `Student Profile:
+- Education Level: ${classLevel}
+- Stream: ${studyArea}
+- Location: ${userState || 'India'}${userDistrict ? ', ' + userDistrict : ''}
+${interests.length > 0 ? `- Interests: ${interests.join(', ')}` : ''}
+
 Aptitude Scores: ${promptData}
 
-Generate exactly 5 career recommendations ranked by suitability. Consider the complete profile, not just the top score.`
+Generate exactly 5 career/course recommendations ranked by suitability. Include specific courses like B.Tech CSE, MBBS, B.Com, etc. for Indian context.`
           }
         ],
         tools: [
@@ -175,7 +185,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
             type: "function",
             function: {
               name: "recommend_careers",
-              description: "Return exactly 5 career recommendations with confidence scores based on aptitude analysis",
+              description: "Return exactly 5 career/course recommendations with confidence scores based on aptitude analysis",
               parameters: {
                 type: "object",
                 properties: {
@@ -188,7 +198,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
                       properties: {
                         career: { 
                           type: "string",
-                          description: "Specific career title"
+                          description: "Specific course/career title (e.g., B.Tech CSE, MBBS, CA)"
                         },
                         confidence: { 
                           type: "number",
@@ -199,14 +209,23 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
                         reason: { 
                           type: "string",
                           description: "Brief explanation referencing specific aptitude scores"
+                        },
+                        branch: {
+                          type: "string",
+                          description: "Specific branch/specialization if applicable (e.g., Artificial Intelligence, Finance)"
                         }
                       },
                       required: ["career", "confidence", "reason"],
                       additionalProperties: false
                     }
+                  },
+                  guidance: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "3-5 important guidance points for the student"
                   }
                 },
-                required: ["recommendations"],
+                required: ["recommendations", "guidance"],
                 additionalProperties: false
               }
             }
@@ -224,24 +243,26 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
         throw new Error('AI service payment required. Please contact support.');
       }
       const errorText = await aiResponse.text();
-      console.error('AI API Error:', aiResponse.status, errorText);
+      console.error('[RecommendationEngine] AI API Error:', aiResponse.status, errorText);
       throw new Error('Failed to generate recommendations');
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI Response received');
+    console.log('[RecommendationEngine] AI Response received');
 
     // Extract recommendations from tool call with validation
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
-      console.error('No tool call in AI response:', JSON.stringify(aiData));
+      console.error('[RecommendationEngine] No tool call in AI response:', JSON.stringify(aiData));
       throw new Error('No tool call in AI response');
     }
 
     let recommendations;
+    let guidance: string[] = [];
     try {
       const args = JSON.parse(toolCall.function.arguments);
       recommendations = args.recommendations;
+      guidance = args.guidance || [];
       
       // Validate recommendations structure
       if (!Array.isArray(recommendations)) {
@@ -249,7 +270,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
       }
       
       if (recommendations.length !== 5) {
-        console.warn(`Expected 5 recommendations, got ${recommendations.length}`);
+        console.warn(`[RecommendationEngine] Expected 5 recommendations, got ${recommendations.length}`);
       }
       
       // Validate each recommendation
@@ -262,11 +283,83 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
         }
       });
       
-      console.log(`Validated ${recommendations.length} recommendations successfully`);
+      console.log(`[RecommendationEngine] Validated ${recommendations.length} recommendations successfully`);
     } catch (e) {
-      console.error('Failed to parse recommendations:', e);
-      console.error('Tool call:', JSON.stringify(toolCall));
+      console.error('[RecommendationEngine] Failed to parse recommendations:', e);
+      console.error('[RecommendationEngine] Tool call:', JSON.stringify(toolCall));
       throw new Error(`Invalid recommendations format: ${e instanceof Error ? e.message : 'Parse error'}`);
+    }
+
+    // Fetch relevant colleges based on user's state and recommended courses
+    let collegeRecommendations: any[] = [];
+    const topCourse = recommendations[0]?.career || '';
+    
+    // Determine course keywords for college search
+    const courseKeywords = topCourse.toLowerCase();
+    let courseFilter: string[] = [];
+    
+    if (courseKeywords.includes('b.tech') || courseKeywords.includes('engineering')) {
+      courseFilter = ['B.Tech', 'B.E.', 'Engineering'];
+    } else if (courseKeywords.includes('mbbs') || courseKeywords.includes('medical')) {
+      courseFilter = ['MBBS', 'Medical', 'BDS'];
+    } else if (courseKeywords.includes('b.com') || courseKeywords.includes('commerce')) {
+      courseFilter = ['B.Com', 'Commerce', 'BBA'];
+    } else if (courseKeywords.includes('b.sc') || courseKeywords.includes('science')) {
+      courseFilter = ['B.Sc', 'Science'];
+    } else if (courseKeywords.includes('b.a') || courseKeywords.includes('arts')) {
+      courseFilter = ['B.A', 'Arts', 'Humanities'];
+    }
+
+    // Query colleges - prioritize user's state
+    let collegeQuery = supabaseAdmin
+      .from('colleges')
+      .select('id, college_name, state, district, rating, courses_offered, fees, website, naac_grade')
+      .eq('is_active', true)
+      .order('rating', { ascending: false, nullsFirst: false })
+      .limit(10);
+    
+    if (userState) {
+      collegeQuery = collegeQuery.eq('state', userState);
+    }
+    
+    const { data: colleges, error: collegeError } = await collegeQuery;
+    
+    if (!collegeError && colleges && colleges.length > 0) {
+      collegeRecommendations = colleges.map(c => ({
+        id: c.id,
+        name: c.college_name || 'Unknown College',
+        state: c.state || 'Unknown',
+        district: c.district || null,
+        rating: c.rating || 0,
+        courses: c.courses_offered || [],
+        fees: c.fees || null,
+        website: c.website || null,
+        naac_grade: c.naac_grade || null
+      }));
+      console.log(`[RecommendationEngine] Found ${collegeRecommendations.length} colleges in ${userState || 'India'}`);
+    } else {
+      // Fallback to top colleges from any state
+      const { data: fallbackColleges } = await supabaseAdmin
+        .from('colleges')
+        .select('id, college_name, state, district, rating, courses_offered, fees, website, naac_grade')
+        .eq('is_active', true)
+        .order('rating', { ascending: false, nullsFirst: false })
+        .limit(10);
+      
+      if (fallbackColleges) {
+        collegeRecommendations = fallbackColleges.map(c => ({
+          id: c.id,
+          name: c.college_name || 'Unknown College',
+          state: c.state || 'Unknown',
+          district: c.district || null,
+          rating: c.rating || 0,
+          courses: c.courses_offered || [],
+          fees: c.fees || null,
+          website: c.website || null,
+          naac_grade: c.naac_grade || null
+        }));
+        console.log(`[RecommendationEngine] Using ${collegeRecommendations.length} top colleges (fallback)`);
+      }
     }
 
     // Get or create career entries and save recommendations
@@ -279,7 +372,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
           .from('careers')
           .select('id')
           .ilike('title', rec.career)
-          .maybeSingle(); // Use maybeSingle to avoid errors on no match
+          .maybeSingle();
 
         let careerId;
         if (!existingCareer) {
@@ -294,7 +387,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
             .maybeSingle();
 
           if (careerError) {
-            console.error('Error creating career:', careerError);
+            console.error('[RecommendationEngine] Error creating career:', careerError);
             throw careerError;
           }
           
@@ -314,7 +407,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
             user_id: userId,
             quiz_session_id: quizSessionId,
             career_id: careerId,
-            confidence_score: Math.round(rec.confidence) // Ensure integer
+            confidence_score: Math.round(rec.confidence)
           })
           .select(`
             *,
@@ -323,15 +416,19 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
           .maybeSingle();
 
         if (recError) {
-          console.error('Error saving recommendation:', recError);
+          console.error('[RecommendationEngine] Error saving recommendation:', recError);
           throw recError;
         }
         
         if (savedRec) {
-          savedRecommendations.push(savedRec);
+          // Add branch info to the saved recommendation
+          savedRecommendations.push({
+            ...savedRec,
+            branch: rec.branch || null
+          });
         }
       } catch (error) {
-        console.error(`Error processing recommendation for ${rec.career}:`, error);
+        console.error(`[RecommendationEngine] Error processing recommendation for ${rec.career}:`, error);
         // Continue with other recommendations even if one fails
       }
     }
@@ -340,7 +437,13 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
       throw new Error('Failed to save any recommendations');
     }
 
-    console.log(`Successfully saved ${savedRecommendations.length} recommendations`);
+    console.log(`[RecommendationEngine] Successfully saved ${savedRecommendations.length} recommendations`);
+
+    // Calculate scores for response
+    const scores: Record<string, number> = {};
+    profile.forEach(p => {
+      scores[p.category] = p.score;
+    });
 
     // Update quiz session as completed
     const avgScore = profile.length > 0 
@@ -352,23 +455,36 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
       .update({ 
         completed: true, 
         completed_at: new Date().toISOString(),
-        score: avgScore
+        score: avgScore,
+        category_scores: scores
       })
       .eq('id', quizSessionId);
 
     if (updateError) {
-      console.error('Error updating quiz session:', updateError);
-      // Don't throw - recommendations are already saved
+      console.error('[RecommendationEngine] Error updating quiz session:', updateError);
     }
 
-    console.log(`Quiz session ${quizSessionId} completed with score ${avgScore}`);
+    console.log(`[RecommendationEngine] Quiz session ${quizSessionId} completed with score ${avgScore}`);
+
+    // Prepare final response with all data
+    const response = {
+      success: true,
+      scores,
+      recommendations: savedRecommendations,
+      colleges: collegeRecommendations,
+      guidance,
+      profile: {
+        class_level: classLevel,
+        study_area: studyArea,
+        state: userState,
+        district: userDistrict
+      }
+    };
+
+    console.log('[RecommendationEngine] Final response prepared successfully');
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        recommendations: savedRecommendations,
-        profile 
-      }),
+      JSON.stringify(response),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -376,7 +492,7 @@ Generate exactly 5 career recommendations ranked by suitability. Consider the co
     );
 
   } catch (error) {
-    console.error('Error in generate-career-recommendations:', error);
+    console.error('[RecommendationEngine] Error:', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error' 
