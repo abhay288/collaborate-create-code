@@ -74,12 +74,15 @@ export default function Quiz() {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('class_level, study_area, interests, preferred_state, preferred_district')
+          .select('class_level, study_area, interests, preferred_state, preferred_district, current_study_level, current_course, target_course_interest, primary_target')
           .eq('id', user.id)
           .maybeSingle();
 
-        // Validate profile completeness
-        if (!profile?.class_level || !profile?.study_area) {
+        // Validate profile completeness - check for new or legacy fields
+        const hasLegacyProfile = profile?.class_level && profile?.study_area;
+        const hasNewProfile = profile?.current_study_level && profile?.current_course;
+        
+        if (!hasLegacyProfile && !hasNewProfile) {
           toast.error('Please complete your profile before taking the quiz', { duration: 4000 });
           navigate('/onboarding');
           return;
@@ -104,17 +107,24 @@ export default function Quiz() {
         ) || [];
 
         // Build comprehensive user profile for quiz generation
+        // Use new profile fields if available, fallback to legacy
         const userProfile = {
           userId: user.id,
-          class_level: profile.class_level,
-          study_area: profile.study_area,
-          interests: profile.interests || [],
+          class_level: profile.class_level || 'UG',
+          study_area: profile.study_area || 'All',
+          interests: profile.target_course_interest || profile.interests || [],
           location: {
             state: profile.preferred_state,
             district: profile.preferred_district
           },
-          past_scores: pastScores
+          past_scores: pastScores,
+          // Enhanced profile data
+          current_study_level: profile.current_study_level,
+          current_course: profile.current_course,
+          primary_target: profile.primary_target,
         };
+        
+        console.log('[Quiz] User profile for quiz generation:', userProfile);
 
         // Fetch filtered questions using the database function
         const { data, error } = await supabase

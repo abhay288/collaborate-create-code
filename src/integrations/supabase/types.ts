@@ -206,46 +206,82 @@ export type Database = {
           age: number | null
           class_level: string | null
           created_at: string
+          creative_score: number | null
+          current_course: string | null
+          current_study_level: string | null
           education_level: string | null
           full_name: string | null
           goals: string | null
           id: string
           interests: string[] | null
+          logical_score: number | null
+          numerical_score: number | null
+          overall_score: number | null
+          preferences: string[] | null
           preferred_district: string | null
           preferred_state: string | null
+          primary_target: string | null
           profile_picture_url: string | null
           study_area: string | null
+          target_admission_year: number | null
+          target_course_interest: string[] | null
+          technical_score: number | null
           updated_at: string
+          verbal_score: number | null
         }
         Insert: {
           age?: number | null
           class_level?: string | null
           created_at?: string
+          creative_score?: number | null
+          current_course?: string | null
+          current_study_level?: string | null
           education_level?: string | null
           full_name?: string | null
           goals?: string | null
           id: string
           interests?: string[] | null
+          logical_score?: number | null
+          numerical_score?: number | null
+          overall_score?: number | null
+          preferences?: string[] | null
           preferred_district?: string | null
           preferred_state?: string | null
+          primary_target?: string | null
           profile_picture_url?: string | null
           study_area?: string | null
+          target_admission_year?: number | null
+          target_course_interest?: string[] | null
+          technical_score?: number | null
           updated_at?: string
+          verbal_score?: number | null
         }
         Update: {
           age?: number | null
           class_level?: string | null
           created_at?: string
+          creative_score?: number | null
+          current_course?: string | null
+          current_study_level?: string | null
           education_level?: string | null
           full_name?: string | null
           goals?: string | null
           id?: string
           interests?: string[] | null
+          logical_score?: number | null
+          numerical_score?: number | null
+          overall_score?: number | null
+          preferences?: string[] | null
           preferred_district?: string | null
           preferred_state?: string | null
+          primary_target?: string | null
           profile_picture_url?: string | null
           study_area?: string | null
+          target_admission_year?: number | null
+          target_course_interest?: string[] | null
+          technical_score?: number | null
           updated_at?: string
+          verbal_score?: number | null
         }
         Relationships: []
       }

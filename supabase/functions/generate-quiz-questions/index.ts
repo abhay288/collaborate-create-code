@@ -24,6 +24,10 @@ interface UserProfile {
   interests?: string[];
   location?: { state?: string; district?: string };
   past_scores?: { category: string; score: number }[];
+  // Enhanced profile fields
+  current_study_level?: string;
+  current_course?: string;
+  primary_target?: string;
 }
 
 // Map common study area variations to valid values
@@ -234,7 +238,10 @@ serve(async (req) => {
       study_area: body.studyArea,
       interests: body.interests,
       location: body.location,
-      past_scores: body.past_scores
+      past_scores: body.past_scores,
+      current_study_level: body.current_study_level,
+      current_course: body.current_course,
+      primary_target: body.primary_target,
     };
     const seed = body.seed; // Optional deterministic seed for debugging
     
@@ -242,6 +249,8 @@ serve(async (req) => {
       userId: profile.userId,
       class_level: profile.class_level,
       study_area: profile.study_area,
+      current_study_level: profile.current_study_level,
+      current_course: profile.current_course,
       has_seed: !!seed
     });
     
@@ -287,19 +296,61 @@ serve(async (req) => {
     const pastScoresContext = profile.past_scores && profile.past_scores.length > 0
       ? `Past performance: ${profile.past_scores.map(s => `${s.category}: ${s.score}%`).join(', ')}`
       : '';
+    
+    // Enhanced profile context from onboarding
+    const currentCourseContext = profile.current_course 
+      ? `Currently studying: ${profile.current_course}` 
+      : '';
+    
+    const studyLevelContext = profile.current_study_level 
+      ? `Study level: ${profile.current_study_level.replace(/_/g, ' ')}` 
+      : '';
+    
+    const targetContext = profile.primary_target 
+      ? `Target: ${profile.primary_target.replace(/_/g, ' ')}` 
+      : '';
+    
+    // Determine question focus based on profile
+    const getQuestionFocus = () => {
+      const course = profile.current_course?.toLowerCase() || '';
+      const studyArea = profile.study_area?.toLowerCase() || '';
+      
+      if (course.includes('pcm') || course.includes('engineering') || course.includes('tech') || studyArea === 'science') {
+        return 'Focus on physics reasoning, mathematical aptitude, logical patterns, and technical problem-solving.';
+      }
+      if (course.includes('pcb') || course.includes('medical') || course.includes('mbbs')) {
+        return 'Focus on biological reasoning, analytical observation, verbal comprehension, and scientific method.';
+      }
+      if (course.includes('commerce') || course.includes('bba') || course.includes('bcom') || studyArea === 'commerce') {
+        return 'Focus on business mathematics, financial reasoning, data interpretation, and decision-making.';
+      }
+      if (course.includes('arts') || course.includes('humanities') || course.includes('ba') || studyArea === 'arts') {
+        return 'Focus on verbal reasoning, creative thinking, social analysis, and communication skills.';
+      }
+      if (course.includes('diploma') || course.includes('iti')) {
+        return 'Focus on practical reasoning, technical skills assessment, and hands-on problem-solving.';
+      }
+      return 'Balance across all aptitude areas with general problem-solving focus.';
+    };
 
     // Define system prompt for question generation with full profile awareness
     const systemPrompt = `You are an expert aptitude test creator. Generate high-quality, diverse aptitude questions tailored specifically for this student profile:
 - Education Level: ${profile.class_level}
 - Study Area: ${profile.study_area}
+${studyLevelContext}
+${currentCourseContext}
+${targetContext}
 ${interestsContext}
 ${locationContext}
 ${pastScoresContext}
 
+QUESTION FOCUS:
+${getQuestionFocus()}
+
 CRITICAL REQUIREMENTS:
-1. Age-appropriate for ${profile.class_level} students
-2. Relevant to ${profile.study_area} academic background
-3. Balanced across all 7 categories
+1. Age-appropriate for ${profile.class_level} students${profile.current_study_level ? ` (${profile.current_study_level.replace(/_/g, ' ')})` : ''}
+2. Relevant to ${profile.study_area}${profile.current_course ? ` - ${profile.current_course}` : ''} academic background
+3. Balanced across all 7 categories but weighted towards relevant skills
 4. Progressive difficulty (easy → medium → hard)
 ${profile.interests ? `5. Incorporate student interests where relevant: ${profile.interests.join(', ')}` : ''}
 
