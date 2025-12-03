@@ -158,10 +158,17 @@ const Dashboard = () => {
   const userName = profile?.full_name || user?.email?.split('@')[0] || "Student";
   const userInitials = profile?.full_name?.split(' ').map((n: string) => n[0]).join('') || userName.charAt(0);
 
-  // Calculate profile completion
-  const profileFields = ['full_name', 'age', 'education_level', 'interests', 'goals'];
-  const completedFields = profileFields.filter(field => profile?.[field]).length;
+  // Calculate profile completion with new fields
+  const profileFields = ['full_name', 'primary_target', 'current_study_level', 'current_course', 'target_course_interest', 'target_admission_year', 'preferred_state'];
+  const completedFields = profileFields.filter(field => {
+    const value = profile?.[field];
+    if (Array.isArray(value)) return value.length > 0;
+    return !!value;
+  }).length;
   const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
+
+  // Check if user needs onboarding
+  const needsOnboarding = !profile?.current_study_level && !profile?.class_level;
 
   const stats = [
     { label: "Quizzes Taken", value: "0", icon: BookOpen, color: "text-primary" },
@@ -174,7 +181,14 @@ const Dashboard = () => {
     { action: "Account created", time: "Just now", status: "completed" }
   ];
 
-  const nextSteps = [
+  const nextSteps = needsOnboarding ? [
+    { 
+      title: "Complete Your Profile", 
+      description: "Tell us about your education journey to get personalized recommendations",
+      link: "/onboarding",
+      icon: Target
+    },
+  ] : [
     { 
       title: "Take Aptitude Quiz", 
       description: "Discover your strengths and get personalized career recommendations",
