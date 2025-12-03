@@ -23,7 +23,8 @@ import {
   Star,
   Building2,
   Calendar,
-  Youtube
+  Youtube,
+  BarChart3
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -230,6 +231,48 @@ const Dashboard = () => {
               <p className="text-muted-foreground">Let's continue your career journey ✨</p>
             </div>
           </div>
+        </div>
+
+        {/* Quick Access Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Link to="/my-result" className="group">
+            <Card className="h-full border-primary/20 hover:border-primary/50 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-500/10 to-blue-600/5">
+              <CardContent className="p-6 flex flex-col items-center text-center">
+                <div className="p-4 rounded-full bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors mb-4">
+                  <BarChart3 className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">My Aptitude Result</h3>
+                <p className="text-sm text-muted-foreground">View your quiz scores, skill breakdown & performance</p>
+                <ArrowRight className="mt-4 h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link to="/recommended-colleges" className="group">
+            <Card className="h-full border-accent/20 hover:border-accent/50 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-500/10 to-green-600/5">
+              <CardContent className="p-6 flex flex-col items-center text-center">
+                <div className="p-4 rounded-full bg-green-500/20 group-hover:bg-green-500/30 transition-colors mb-4">
+                  <GraduationCap className="h-8 w-8 text-green-600 group-hover:scale-110 transition-transform" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 group-hover:text-accent transition-colors">Recommended Colleges</h3>
+                <p className="text-sm text-muted-foreground">Best-fit colleges based on your profile & location</p>
+                <ArrowRight className="mt-4 h-5 w-5 text-muted-foreground group-hover:text-accent group-hover:translate-x-1 transition-all" />
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link to="/recommended-courses" className="group">
+            <Card className="h-full border-purple-500/20 hover:border-purple-500/50 hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-500/10 to-purple-600/5">
+              <CardContent className="p-6 flex flex-col items-center text-center">
+                <div className="p-4 rounded-full bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors mb-4">
+                  <BookOpen className="h-8 w-8 text-purple-600 group-hover:scale-110 transition-transform" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 group-hover:text-purple-600 transition-colors">Recommended Courses</h3>
+                <p className="text-sm text-muted-foreground">Course & branch suggestions based on your aptitude</p>
+                <ArrowRight className="mt-4 h-5 w-5 text-muted-foreground group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Stats Cards */}
