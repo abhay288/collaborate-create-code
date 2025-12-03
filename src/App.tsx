@@ -19,6 +19,9 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Quiz = lazy(() => import("./pages/Quiz"));
 const QuizResults = lazy(() => import("./pages/QuizResults"));
+const MyResults = lazy(() => import("./pages/MyResults"));
+const RecommendedColleges = lazy(() => import("./pages/RecommendedColleges"));
+const RecommendedCourses = lazy(() => import("./pages/RecommendedCourses"));
 const Careers = lazy(() => import("./pages/Careers"));
 const Colleges = lazy(() => import("./pages/Colleges"));
 const Scholarships = lazy(() => import("./pages/Scholarships"));
@@ -64,6 +67,9 @@ const App = () => (
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
               <Route path="/quiz/results" element={<ProtectedRoute><QuizResults /></ProtectedRoute>} />
+              <Route path="/my-result" element={<ProtectedRoute><MyResults /></ProtectedRoute>} />
+              <Route path="/recommended-colleges" element={<ProtectedRoute><RecommendedColleges /></ProtectedRoute>} />
+              <Route path="/recommended-courses" element={<ProtectedRoute><RecommendedCourses /></ProtectedRoute>} />
               <Route path="/careers" element={<ProtectedRoute><Careers /></ProtectedRoute>} />
               <Route path="/colleges" element={<ProtectedRoute><Colleges /></ProtectedRoute>} />
               <Route path="/scholarships" element={<ProtectedRoute><Scholarships /></ProtectedRoute>} />
