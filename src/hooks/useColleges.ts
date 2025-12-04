@@ -33,33 +33,48 @@ export const useColleges = (options: UseCollegesOptions = {}) => {
   const [districts, setDistricts] = useState<string[]>(['All']);
   const [collegeTypes, setCollegeTypes] = useState<string[]>(['All']);
 
-  // Fetch filter options on mount
+  // Fetch filter options on mount - FIX: Get ALL distinct states
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        // Fetch distinct states
-        const { data: stateData } = await supabase
+        console.log('[useColleges] Fetching all distinct states...');
+        
+        // Fetch ALL distinct states using a more reliable approach
+        const { data: stateData, error: stateError } = await supabase
           .from('colleges')
           .select('state')
           .not('state', 'is', null)
           .neq('state', '')
-          .order('state');
+          .neq('state', 'Unknown');
+        
+        if (stateError) {
+          console.error('[useColleges] Error fetching states:', stateError);
+        }
         
         if (stateData) {
-          const uniqueStates = [...new Set(stateData.map(d => d.state).filter(Boolean))];
-          setStates(['All', ...uniqueStates.sort()]);
+          // Extract unique states and sort them
+          const allStates = stateData.map(d => d.state).filter(Boolean);
+          const uniqueStates = [...new Set(allStates)].sort() as string[];
+          console.log('[useColleges] Found states:', uniqueStates.length, uniqueStates);
+          setStates(['All', ...uniqueStates]);
         }
 
         // Fetch distinct college types
-        const { data: typeData } = await supabase
+        const { data: typeData, error: typeError } = await supabase
           .from('colleges')
           .select('college_type')
           .not('college_type', 'is', null)
           .neq('college_type', '');
         
+        if (typeError) {
+          console.error('[useColleges] Error fetching types:', typeError);
+        }
+        
         if (typeData) {
-          const uniqueTypes = [...new Set(typeData.map(d => d.college_type).filter(Boolean))];
-          setCollegeTypes(['All', ...uniqueTypes.sort()]);
+          const allTypes = typeData.map(d => d.college_type).filter(Boolean);
+          const uniqueTypes = [...new Set(allTypes)].sort() as string[];
+          console.log('[useColleges] Found college types:', uniqueTypes.length);
+          setCollegeTypes(['All', ...uniqueTypes]);
         }
       } catch (error) {
         logError(error, 'fetchFilterOptions');
@@ -69,7 +84,7 @@ export const useColleges = (options: UseCollegesOptions = {}) => {
     fetchFilterOptions();
   }, []);
 
-  // Fetch districts when state changes
+  // Fetch districts when state changes - FIX: Use case-insensitive matching
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
@@ -80,14 +95,21 @@ export const useColleges = (options: UseCollegesOptions = {}) => {
           .neq('district', '');
 
         if (filters.state && filters.state !== 'All') {
+          // Use case-insensitive matching for state
           query = query.ilike('state', filters.state);
         }
 
-        const { data: districtData } = await query;
+        const { data: districtData, error } = await query;
+        
+        if (error) {
+          console.error('[useColleges] Error fetching districts:', error);
+        }
         
         if (districtData) {
-          const uniqueDistricts = [...new Set(districtData.map(d => d.district).filter(Boolean))];
-          setDistricts(['All', ...uniqueDistricts.sort()]);
+          const allDistricts = districtData.map(d => d.district).filter(Boolean);
+          const uniqueDistricts = [...new Set(allDistricts)].sort() as string[];
+          console.log('[useColleges] Found districts:', uniqueDistricts.length);
+          setDistricts(['All', ...uniqueDistricts]);
         }
       } catch (error) {
         logError(error, 'fetchDistricts');
@@ -97,14 +119,15 @@ export const useColleges = (options: UseCollegesOptions = {}) => {
     fetchDistricts();
   }, [filters.state]);
 
-  // Build the query with filters
+  // Build the query with filters - FIX: Use case-insensitive matching
   const buildQuery = useCallback((countOnly = false) => {
     let query = supabase
       .from('colleges')
       .select(countOnly ? '*' : '*', { count: 'exact', head: countOnly });
 
-    // Apply filters with case-insensitive matching
+    // Apply filters with case-insensitive matching (ILIKE)
     if (filters.state && filters.state !== 'All') {
+      // Use ILIKE for case-insensitive matching
       query = query.ilike('state', filters.state);
     }
 
@@ -138,7 +161,12 @@ export const useColleges = (options: UseCollegesOptions = {}) => {
       }
 
       // Get total count first
-      const { count } = await buildQuery(true);
+      const { count, error: countError } = await buildQuery(true);
+      
+      if (countError) {
+        console.error('[useColleges] Error getting count:', countError);
+      }
+      
       setTotalCount(count || 0);
       console.log(`[useColleges] Total matching colleges: ${count}`);
 
