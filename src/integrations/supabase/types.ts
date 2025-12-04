@@ -214,6 +214,7 @@ export type Database = {
           goals: string | null
           id: string
           interests: string[] | null
+          is_onboarding_complete: boolean | null
           logical_score: number | null
           numerical_score: number | null
           overall_score: number | null
@@ -241,6 +242,7 @@ export type Database = {
           goals?: string | null
           id: string
           interests?: string[] | null
+          is_onboarding_complete?: boolean | null
           logical_score?: number | null
           numerical_score?: number | null
           overall_score?: number | null
@@ -268,6 +270,7 @@ export type Database = {
           goals?: string | null
           id?: string
           interests?: string[] | null
+          is_onboarding_complete?: boolean | null
           logical_score?: number | null
           numerical_score?: number | null
           overall_score?: number | null

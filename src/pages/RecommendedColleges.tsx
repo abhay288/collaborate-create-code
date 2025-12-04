@@ -18,12 +18,49 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
+// Comprehensive nearby states mapping for India
+const NEARBY_STATES_MAP: Record<string, string[]> = {
+  'Andhra Pradesh': ['Telangana', 'Karnataka', 'Tamil Nadu', 'Odisha', 'Chhattisgarh'],
+  'Arunachal Pradesh': ['Assam', 'Nagaland'],
+  'Assam': ['Arunachal Pradesh', 'Nagaland', 'Manipur', 'Mizoram', 'Tripura', 'Meghalaya', 'West Bengal'],
+  'Bihar': ['Uttar Pradesh', 'Jharkhand', 'West Bengal'],
+  'Chhattisgarh': ['Madhya Pradesh', 'Maharashtra', 'Odisha', 'Jharkhand', 'Telangana', 'Andhra Pradesh'],
+  'Delhi': ['Haryana', 'Uttar Pradesh', 'Rajasthan'],
+  'Goa': ['Maharashtra', 'Karnataka'],
+  'Gujarat': ['Maharashtra', 'Rajasthan', 'Madhya Pradesh'],
+  'Haryana': ['Delhi', 'Punjab', 'Himachal Pradesh', 'Uttar Pradesh', 'Rajasthan'],
+  'Himachal Pradesh': ['Punjab', 'Haryana', 'Uttarakhand', 'Jammu and Kashmir'],
+  'Jharkhand': ['Bihar', 'West Bengal', 'Odisha', 'Chhattisgarh', 'Uttar Pradesh'],
+  'Karnataka': ['Maharashtra', 'Goa', 'Kerala', 'Tamil Nadu', 'Andhra Pradesh', 'Telangana'],
+  'Kerala': ['Karnataka', 'Tamil Nadu'],
+  'Madhya Pradesh': ['Uttar Pradesh', 'Rajasthan', 'Gujarat', 'Maharashtra', 'Chhattisgarh'],
+  'Maharashtra': ['Gujarat', 'Madhya Pradesh', 'Chhattisgarh', 'Telangana', 'Karnataka', 'Goa'],
+  'Manipur': ['Assam', 'Nagaland', 'Mizoram'],
+  'Meghalaya': ['Assam', 'Bangladesh'],
+  'Mizoram': ['Assam', 'Manipur', 'Tripura'],
+  'Nagaland': ['Assam', 'Arunachal Pradesh', 'Manipur'],
+  'Odisha': ['West Bengal', 'Jharkhand', 'Chhattisgarh', 'Andhra Pradesh'],
+  'Punjab': ['Haryana', 'Himachal Pradesh', 'Rajasthan', 'Jammu and Kashmir'],
+  'Rajasthan': ['Gujarat', 'Madhya Pradesh', 'Uttar Pradesh', 'Haryana', 'Punjab'],
+  'Sikkim': ['West Bengal'],
+  'Tamil Nadu': ['Kerala', 'Karnataka', 'Andhra Pradesh', 'Puducherry'],
+  'Telangana': ['Maharashtra', 'Chhattisgarh', 'Karnataka', 'Andhra Pradesh'],
+  'Tripura': ['Assam', 'Mizoram'],
+  'Uttar Pradesh': ['Delhi', 'Haryana', 'Rajasthan', 'Madhya Pradesh', 'Chhattisgarh', 'Bihar', 'Jharkhand', 'Uttarakhand'],
+  'Uttarakhand': ['Himachal Pradesh', 'Uttar Pradesh'],
+  'West Bengal': ['Bihar', 'Jharkhand', 'Odisha', 'Sikkim', 'Assam'],
+  'Jammu and Kashmir': ['Himachal Pradesh', 'Punjab', 'Ladakh'],
+  'Ladakh': ['Jammu and Kashmir', 'Himachal Pradesh'],
+  'Puducherry': ['Tamil Nadu'],
+};
+
 const RecommendedColleges = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [colleges, setColleges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasQuizResults, setHasQuizResults] = useState(false);
+  const [targetCourse, setTargetCourse] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -55,51 +92,61 @@ const RecommendedColleges = () => {
       setHasQuizResults(!!sessionData);
 
       if (profileData) {
+        // Determine target course from profile
+        const targetCourses = profileData.target_course_interest || [];
+        const primaryTarget = targetCourses[0] || inferCourseFromProfile(profileData);
+        setTargetCourse(primaryTarget);
+
         // Fetch colleges based on user's state preference
         const userState = profileData.preferred_state;
-        
-        // Define nearby states mapping
-        const nearbyStatesMap: Record<string, string[]> = {
-          'Maharashtra': ['Gujarat', 'Madhya Pradesh', 'Karnataka', 'Goa'],
-          'Karnataka': ['Maharashtra', 'Goa', 'Kerala', 'Tamil Nadu', 'Andhra Pradesh'],
-          'Tamil Nadu': ['Karnataka', 'Kerala', 'Andhra Pradesh', 'Puducherry'],
-          'Delhi': ['Haryana', 'Uttar Pradesh', 'Rajasthan'],
-          'Uttar Pradesh': ['Delhi', 'Madhya Pradesh', 'Bihar', 'Rajasthan', 'Haryana'],
-          'Gujarat': ['Maharashtra', 'Rajasthan', 'Madhya Pradesh'],
-          'Rajasthan': ['Gujarat', 'Madhya Pradesh', 'Haryana', 'Delhi', 'Punjab'],
-          'West Bengal': ['Bihar', 'Jharkhand', 'Odisha', 'Assam'],
-          'Andhra Pradesh': ['Telangana', 'Karnataka', 'Tamil Nadu', 'Odisha'],
-          'Telangana': ['Andhra Pradesh', 'Karnataka', 'Maharashtra', 'Chhattisgarh'],
-        };
-
-        const nearbyStates = nearbyStatesMap[userState] || [];
+        const nearbyStates = userState ? (NEARBY_STATES_MAP[userState] || []) : [];
         const allStates = userState ? [userState, ...nearbyStates] : [];
+
+        console.log('[RecommendedColleges] User state:', userState);
+        console.log('[RecommendedColleges] Nearby states:', nearbyStates);
+        console.log('[RecommendedColleges] Target course:', primaryTarget);
 
         let collegeQuery = supabase
           .from('colleges')
           .select('*')
           .eq('is_active', true)
-          .order('rating', { ascending: false })
-          .limit(20);
+          .order('rating', { ascending: false, nullsFirst: false })
+          .limit(30);
 
+        // Filter by state if available
         if (allStates.length > 0) {
           collegeQuery = collegeQuery.in('state', allStates);
         }
 
-        const { data: collegesData } = await collegeQuery;
+        const { data: collegesData, error } = await collegeQuery;
         
-        // If no colleges found in nearby states, fetch top colleges
+        if (error) {
+          console.error('[RecommendedColleges] Error fetching colleges:', error);
+        }
+
+        console.log('[RecommendedColleges] Found colleges:', collegesData?.length || 0);
+
+        // If no colleges found in nearby states, fetch top colleges from any state
         if (!collegesData || collegesData.length === 0) {
+          console.log('[RecommendedColleges] No state-specific colleges, fetching top colleges...');
           const { data: topColleges } = await supabase
             .from('colleges')
             .select('*')
             .eq('is_active', true)
-            .order('rating', { ascending: false })
+            .order('rating', { ascending: false, nullsFirst: false })
             .limit(20);
           
           setColleges(topColleges || []);
         } else {
-          setColleges(collegesData);
+          // Sort to prioritize user's state colleges first
+          const sortedColleges = collegesData.sort((a, b) => {
+            // User's state colleges first
+            if (a.state === userState && b.state !== userState) return -1;
+            if (b.state === userState && a.state !== userState) return 1;
+            // Then by rating
+            return (b.rating || 0) - (a.rating || 0);
+          });
+          setColleges(sortedColleges);
         }
       }
     } catch (error) {
@@ -107,6 +154,30 @@ const RecommendedColleges = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Infer target course from profile data
+  const inferCourseFromProfile = (profile: any): string => {
+    const studyArea = profile.study_area?.toLowerCase() || '';
+    const currentLevel = profile.current_study_level?.toLowerCase() || '';
+    const currentCourse = profile.current_course?.toLowerCase() || '';
+
+    if (currentCourse.includes('pcm') || currentCourse.includes('engineering')) {
+      return 'B.Tech / Engineering';
+    }
+    if (currentCourse.includes('pcb') || currentCourse.includes('medical')) {
+      return 'MBBS / Medical';
+    }
+    if (studyArea === 'commerce' || currentCourse.includes('commerce')) {
+      return 'B.Com / BBA';
+    }
+    if (studyArea === 'arts') {
+      return 'BA / Arts';
+    }
+    if (currentLevel.includes('ug')) {
+      return 'Post Graduate Programs';
+    }
+    return 'Engineering / Science';
   };
 
   return (
@@ -152,16 +223,27 @@ const RecommendedColleges = () => {
         ) : (
           <div className="space-y-6">
             {/* User Info Banner */}
-            {profile?.preferred_state && (
-              <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
-                <CardContent className="py-4">
-                  <div className="flex items-center gap-2 text-sm">
+            <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+              <CardContent className="py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
-                    <span>Showing colleges in <strong>{profile.preferred_state}</strong> and nearby states</span>
+                    <span>
+                      {profile?.preferred_state 
+                        ? <>Showing colleges in <strong>{profile.preferred_state}</strong> and nearby states</>
+                        : <>Showing top colleges across India</>
+                      }
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  {targetCourse && (
+                    <div className="flex items-center gap-2 sm:ml-4">
+                      <BookOpen className="h-4 w-4 text-accent" />
+                      <span>Target: <strong>{targetCourse}</strong></span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Colleges Grid */}
             {colleges.length === 0 ? (
@@ -196,6 +278,9 @@ const RecommendedColleges = () => {
                       <CardDescription className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
                         {college.district || 'Unknown'}, {college.state || 'Unknown'}
+                        {college.state === profile?.preferred_state && (
+                          <Badge variant="outline" className="ml-2 text-xs">Your State</Badge>
+                        )}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
