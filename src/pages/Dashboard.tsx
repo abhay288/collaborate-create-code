@@ -24,7 +24,8 @@ import {
   Building2,
   Calendar,
   Youtube,
-  BarChart3
+  BarChart3,
+  Filter
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -33,8 +34,8 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useVerifiedJobs } from "@/hooks/useVerifiedJobs";
-import { useColleges } from "@/hooks/useColleges";
 import { useVerifiedScholarships } from "@/hooks/useVerifiedScholarships";
+import { useStreamBasedRecommendations } from "@/hooks/useStreamBasedRecommendations";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
 
 const Dashboard = () => {
@@ -43,7 +44,11 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [latestRecommendations, setLatestRecommendations] = useState<any>(null);
   const { jobs, loading: jobsLoading } = useVerifiedJobs();
-  const { colleges, loading: collegesLoading } = useColleges();
+  const { 
+    colleges: recommendedColleges, 
+    userStream,
+    loading: collegesLoading 
+  } = useStreamBasedRecommendations();
   const { scholarships, loading: scholarshipsLoading } = useVerifiedScholarships();
 
   useEffect(() => {
@@ -498,42 +503,77 @@ const Dashboard = () => {
                   <CardTitle className="flex items-center gap-2">
                     <GraduationCap className="h-5 w-5" />
                     Recommended Colleges
+                    {userStream && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {userStream} Stream
+                      </Badge>
+                    )}
                   </CardTitle>
                   <CardDescription>
-                    Top colleges matching your preferences and location
+                    Stream-based colleges matching your {userStream || 'academic'} background & location
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {collegesLoading ? (
                     <p className="text-center py-8 text-muted-foreground">Loading colleges...</p>
-                  ) : colleges.length === 0 ? (
-                    <p className="text-center py-8 text-muted-foreground">No colleges available yet</p>
+                  ) : recommendedColleges.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">No colleges available yet. Complete your profile to get recommendations.</p>
+                      <Button asChild variant="outline">
+                        <Link to="/profile">Complete Profile</Link>
+                      </Button>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {colleges.slice(0, 6).map((college) => (
+                      {recommendedColleges.slice(0, 6).map((college) => (
                         <Card key={college.id} className="hover:shadow-lg transition-shadow">
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-semibold text-foreground">{college.college_name}</h3>
-                              <Badge variant="secondary" className="ml-2">
-                                {Math.round(college.confidence_score)}% match
+                              <h3 className="font-semibold text-foreground line-clamp-2">{college.college_name}</h3>
+                              <Badge variant="secondary" className="ml-2 shrink-0">
+                                {college.confidence_score}% match
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-1">{college.course}</p>
+                            {college.specialised_in && (
+                              <Badge variant="outline" className="mb-2 text-xs">
+                                {college.specialised_in}
+                              </Badge>
+                            )}
                             <p className="text-sm text-muted-foreground mb-2">
                               <MapPin className="inline h-3 w-3 mr-1" />
-                              {college.city}, {college.state}
+                              {college.district}, {college.state}
+                              {college.is_user_state && (
+                                <Badge variant="outline" className="ml-2 text-xs bg-primary/10">Your State</Badge>
+                              )}
                             </p>
-                            <p className="text-sm font-medium text-foreground mb-2">
-                              💰 {college.approx_fees}
+                            {college.fees && (
+                              <p className="text-sm font-medium text-foreground mb-2">
+                                💰 ₹{college.fees.toLocaleString()}/year
+                              </p>
+                            )}
+                            {college.rating && (
+                              <p className="text-sm mb-2 flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                                {college.rating.toFixed(1)}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mb-3 bg-muted/50 p-2 rounded">
+                              {college.match_reason}
                             </p>
-                            <p className="text-xs text-muted-foreground mb-3">{college.match_reason}</p>
                             <div className="space-y-2">
-                              <Button asChild size="sm" className="w-full">
-                                <a href={college.admission_link} target="_blank" rel="noopener noreferrer">
-                                  Visit Website
-                                </a>
-                              </Button>
+                              {college.website ? (
+                                <Button asChild size="sm" className="w-full">
+                                  <a href={college.website} target="_blank" rel="noopener noreferrer">
+                                    Visit Website
+                                  </a>
+                                </Button>
+                              ) : college.admission_link ? (
+                                <Button asChild size="sm" className="w-full">
+                                  <a href={college.admission_link} target="_blank" rel="noopener noreferrer">
+                                    Apply Now
+                                  </a>
+                                </Button>
+                              ) : null}
                               <FeedbackButtons 
                                 recommendationType="college" 
                                 recommendationId={college.id}
@@ -543,6 +583,16 @@ const Dashboard = () => {
                           </CardContent>
                         </Card>
                       ))}
+                    </div>
+                  )}
+                  {recommendedColleges.length > 0 && (
+                    <div className="mt-4 text-center">
+                      <Button asChild variant="outline">
+                        <Link to="/recommended-colleges">
+                          View All Recommended Colleges
+                          <ExternalLink className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
                     </div>
                   )}
                 </CardContent>
