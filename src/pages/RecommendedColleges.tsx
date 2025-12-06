@@ -27,7 +27,7 @@ const RecommendedColleges = () => {
     userStream, 
     loading, 
     error,
-    refresh 
+    refreshRecommendations 
   } = useStreamBasedRecommendations();
   
   const [showFutureCourses, setShowFutureCourses] = useState(false);
@@ -76,7 +76,7 @@ const RecommendedColleges = () => {
                 Stream-based college recommendations based on your profile
               </p>
             </div>
-            <Button variant="outline" onClick={refresh} disabled={loading}>
+            <Button variant="outline" onClick={refreshRecommendations} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
@@ -91,7 +91,7 @@ const RecommendedColleges = () => {
           <Card className="border-destructive/50">
             <CardContent className="py-16 text-center">
               <p className="text-destructive">{error}</p>
-              <Button onClick={refresh} className="mt-4">
+              <Button onClick={refreshRecommendations} className="mt-4">
                 Try Again
               </Button>
             </CardContent>
@@ -161,15 +161,20 @@ const RecommendedColleges = () => {
                           key={index}
                           className="p-3 rounded-lg border bg-gradient-to-r from-accent/5 to-primary/5 hover:shadow-md transition-shadow"
                         >
-                          <h4 className="font-semibold text-foreground">{course.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {course.description}
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-semibold text-foreground">{course.name}</h4>
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              {course.score}% match
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {course.reason}
                           </p>
-                          {course.entranceExams.length > 0 && (
+                          {course.tags.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
-                              {course.entranceExams.slice(0, 3).map((exam, i) => (
+                              {course.tags.slice(0, 3).map((tag, i) => (
                                 <Badge key={i} variant="outline" className="text-xs">
-                                  {exam}
+                                  {tag}
                                 </Badge>
                               ))}
                             </div>

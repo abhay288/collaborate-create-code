@@ -2,95 +2,166 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Stream to college type mapping
+// Stream to college type mapping (matching actual database values)
 const STREAM_COLLEGE_MAPPING: Record<string, string[]> = {
   'Computer Science': [
-    'Engineering & Technology', 'BCA', 'BCA AND BBA', 'IT', 'Computer', 
-    'Information Technology', 'Software', 'Data Science', 'AI', 'Cyber'
+    'engineering & technology', 'computer application', 'computer', 'technical',
+    'it', 'software', 'data science', 'information technology', 'bca', 'mca'
   ],
   'Medical': [
-    'Medical-Allopathy', 'Medical-Ayurveda', 'BUMS', 'BHMS', 'BDS', 'MBBS',
-    'Para Medical', 'Nursing', 'Pharmacy', 'B.Pharm', 'D.Pharm', 'Paramedical',
-    'Nursing and Paramedical', 'Medical', 'Health', 'Physiotherapy'
+    'medical-allopathy', 'medical-ayurveda', 'medical-homeopathy', 'medical-dental',
+    'medical-others', 'nursing', 'pharmacy', 'paramedical', 'physiotherapy', 'health'
   ],
   'Commerce': [
-    'Commerce', 'Management', 'BBA', 'B.Com', 'MBA', 'Finance', 'Accounting',
-    'Business', 'Commerce and management', 'COMMERCE SCIENCE'
+    'commerce', 'management', 'hotel & tourism management', 'finance', 
+    'accounting', 'business', 'bba', 'mba'
   ],
   'Arts': [
-    'Arts', 'Humanities', 'Social Sciences', 'Fine Arts', 'Visual Arts',
-    'Music', 'Dance', 'Literature', 'Social Work', 'Design', 'GAYAN', 'BADAN'
+    'arts', 'fine arts', 'education/teacher education', 'journalism & mass communication',
+    'sanskrit', 'oriental learning', 'humanities', 'social work', 'law', 'design'
   ],
   'Science': [
-    'Science', 'Physics', 'Chemistry', 'Biology', 'Biotechnology', 'Microbiology',
-    'Agriculture', 'Horticulture', 'Food Technology', 'Fisheries'
+    'science', 'agriculture', 'horticulture', 'food technology', 'fisheries',
+    'biotechnology', 'microbiology', 'physics', 'chemistry', 'biology'
   ],
   'Engineering': [
-    'Engineering & Technology', 'B.Tech', 'Architecture', 'Mechanical',
-    'Electrical', 'Civil', 'Electronics', 'Chemical'
+    'engineering & technology', 'technical', 'architecture', 'computer application',
+    'mechanical', 'electrical', 'civil', 'electronics'
   ],
 };
 
-// Future course mapping based on current education
-const FUTURE_COURSE_MAPPING: Record<string, { courses: string[]; collegeTypes: string[] }> = {
-  // 12th Science (PCM)
+// Future course recommendations (NO current course duplication)
+const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: string; tags: string[] }[]; collegeTypes: string[] }> = {
+  // Class 12 Science (PCM)
   '12th_science_pcm': {
-    courses: ['B.Tech CSE', 'B.Tech IT', 'B.Tech AI/ML', 'B.Tech Electronics', 'BCA', 'B.Sc Physics', 'B.Sc Mathematics', 'B.Arch'],
-    collegeTypes: ['Engineering & Technology', 'BCA', 'Science', 'Architecture']
+    courses: [
+      { code: 'BTECH_CSE', name: 'B.Tech Computer Science', tags: ['technical', 'coding', 'software'] },
+      { code: 'BTECH_IT', name: 'B.Tech Information Technology', tags: ['technical', 'it'] },
+      { code: 'BTECH_AIML', name: 'B.Tech AI/ML', tags: ['technical', 'ai', 'data'] },
+      { code: 'BTECH_ECE', name: 'B.Tech Electronics', tags: ['technical', 'electronics'] },
+      { code: 'BCA', name: 'BCA', tags: ['computer', 'programming'] },
+      { code: 'BSC_PHY', name: 'B.Sc Physics', tags: ['science', 'physics'] },
+      { code: 'BSC_MATH', name: 'B.Sc Mathematics', tags: ['numerical', 'mathematics'] },
+      { code: 'BARCH', name: 'B.Arch', tags: ['design', 'creative', 'architecture'] },
+    ],
+    collegeTypes: ['engineering', 'technology', 'bca', 'science', 'architecture']
   },
-  // 12th Science (PCB)
+  // Class 12 Science (PCB)
   '12th_science_pcb': {
-    courses: ['MBBS', 'BDS', 'BAMS', 'BHMS', 'B.Pharm', 'Nursing', 'BPT', 'B.Sc Nursing', 'Paramedical'],
-    collegeTypes: ['Medical-Allopathy', 'Medical-Ayurveda', 'BUMS', 'BHMS', 'Para Medical', 'Nursing', 'Pharmacy', 'Nursing and Paramedical']
+    courses: [
+      { code: 'MBBS', name: 'MBBS', tags: ['medical', 'doctor'] },
+      { code: 'BDS', name: 'BDS (Dental)', tags: ['medical', 'dental'] },
+      { code: 'BAMS', name: 'BAMS (Ayurveda)', tags: ['medical', 'ayurveda'] },
+      { code: 'BHMS', name: 'BHMS (Homeopathy)', tags: ['medical', 'homeopathy'] },
+      { code: 'BPHARM', name: 'B.Pharm', tags: ['pharmacy', 'medical'] },
+      { code: 'BSC_NURSING', name: 'B.Sc Nursing', tags: ['nursing', 'medical'] },
+      { code: 'BPT', name: 'BPT (Physiotherapy)', tags: ['physiotherapy', 'medical'] },
+      { code: 'PARAMEDICAL', name: 'Paramedical Courses', tags: ['medical', 'paramedical'] },
+    ],
+    collegeTypes: ['medical', 'allopathy', 'ayurveda', 'pharmacy', 'nursing', 'paramedical']
   },
-  // 12th Commerce
+  // Class 12 Commerce
   '12th_commerce': {
-    courses: ['B.Com', 'BBA', 'CA Foundation', 'CS Foundation', 'B.Com Honours', 'BBA Finance'],
-    collegeTypes: ['Commerce', 'Management', 'BBA', 'Commerce and management']
+    courses: [
+      { code: 'BCOM', name: 'B.Com', tags: ['commerce', 'accounting'] },
+      { code: 'BBA', name: 'BBA', tags: ['business', 'management'] },
+      { code: 'CA', name: 'CA Foundation', tags: ['accounting', 'finance'] },
+      { code: 'CS', name: 'CS Foundation', tags: ['corporate', 'law'] },
+      { code: 'BCOM_HONS', name: 'B.Com Honours', tags: ['commerce', 'accounting'] },
+      { code: 'BBA_FIN', name: 'BBA Finance', tags: ['business', 'finance'] },
+    ],
+    collegeTypes: ['commerce', 'management', 'bba']
   },
-  // 12th Arts
+  // Class 12 Arts
   '12th_arts': {
-    courses: ['BA', 'BA Honours', 'BJMC', 'BSW', 'BFA', 'B.Des', 'BA LLB'],
-    collegeTypes: ['Arts', 'Humanities', 'Social Sciences', 'Fine Arts', 'Visual Arts', 'Social Work']
+    courses: [
+      { code: 'BA', name: 'BA', tags: ['arts', 'humanities'] },
+      { code: 'BA_HONS', name: 'BA Honours', tags: ['arts', 'humanities'] },
+      { code: 'BJMC', name: 'BJMC (Journalism)', tags: ['media', 'journalism'] },
+      { code: 'BSW', name: 'BSW (Social Work)', tags: ['social', 'welfare'] },
+      { code: 'BFA', name: 'BFA (Fine Arts)', tags: ['creative', 'arts'] },
+      { code: 'BDES', name: 'B.Des', tags: ['design', 'creative'] },
+      { code: 'BALLB', name: 'BA LLB', tags: ['law', 'legal'] },
+    ],
+    collegeTypes: ['arts', 'humanities', 'social sciences', 'fine arts', 'law']
   },
   // Diploma CS/IT
   'diploma_cs': {
-    courses: ['B.Tech CSE (Lateral Entry)', 'B.Tech IT (Lateral Entry)', 'BCA', 'B.Sc CS'],
-    collegeTypes: ['Engineering & Technology', 'BCA', 'IT', 'Computer']
+    courses: [
+      { code: 'BTECH_LE_CSE', name: 'B.Tech CSE (Lateral Entry)', tags: ['technical', 'coding'] },
+      { code: 'BTECH_LE_IT', name: 'B.Tech IT (Lateral Entry)', tags: ['technical', 'it'] },
+      { code: 'BCA', name: 'BCA', tags: ['computer', 'programming'] },
+      { code: 'BSC_CS', name: 'B.Sc Computer Science', tags: ['computer', 'science'] },
+    ],
+    collegeTypes: ['engineering', 'technology', 'bca', 'computer']
   },
-  // Diploma Engineering
+  // Diploma Engineering (other)
   'diploma_engineering': {
-    courses: ['B.Tech (Lateral Entry)', 'B.E. (Lateral Entry)'],
-    collegeTypes: ['Engineering & Technology', 'Architecture']
+    courses: [
+      { code: 'BTECH_LE', name: 'B.Tech (Lateral Entry)', tags: ['engineering', 'technical'] },
+      { code: 'BE_LE', name: 'B.E. (Lateral Entry)', tags: ['engineering', 'technical'] },
+    ],
+    collegeTypes: ['engineering', 'technology']
   },
-  // UG Computer Science
+  // UG Computer Science (B.Tech CSE, BCA, B.Sc CS)
   'ug_cs': {
-    courses: ['M.Tech CSE', 'MCA', 'M.Sc CS', 'MBA (IT)', 'MS (Abroad)'],
-    collegeTypes: ['Engineering & Technology', 'Management', 'Science']
+    courses: [
+      { code: 'MTECH_CSE', name: 'M.Tech CSE', tags: ['technical', 'advanced', 'computer'] },
+      { code: 'MTECH_AIML', name: 'M.Tech AI/ML', tags: ['technical', 'ai', 'data'] },
+      { code: 'MCA', name: 'MCA', tags: ['computer', 'programming'] },
+      { code: 'MSC_CS', name: 'M.Sc Computer Science', tags: ['computer', 'science'] },
+      { code: 'MBA_IT', name: 'MBA (IT Management)', tags: ['management', 'it'] },
+      { code: 'MTECH_CYBER', name: 'M.Tech Cybersecurity', tags: ['security', 'technical'] },
+    ],
+    collegeTypes: ['engineering', 'technology', 'management']
   },
   // UG Medical/Biology
   'ug_medical': {
-    courses: ['MD', 'MS', 'M.Sc Nursing', 'M.Pharm', 'MPT', 'PhD'],
-    collegeTypes: ['Medical-Allopathy', 'Medical-Ayurveda', 'Para Medical', 'Nursing']
+    courses: [
+      { code: 'MD', name: 'MD (Doctor of Medicine)', tags: ['medical', 'specialist'] },
+      { code: 'MS_MED', name: 'MS (Master of Surgery)', tags: ['medical', 'surgery'] },
+      { code: 'MSC_NURSING', name: 'M.Sc Nursing', tags: ['nursing', 'medical'] },
+      { code: 'MPHARM', name: 'M.Pharm', tags: ['pharmacy', 'medical'] },
+      { code: 'MPT', name: 'MPT (Physiotherapy)', tags: ['physiotherapy', 'medical'] },
+    ],
+    collegeTypes: ['medical', 'allopathy', 'nursing', 'pharmacy']
   },
-  // UG Commerce
+  // UG Commerce (B.Com, BBA)
   'ug_commerce': {
-    courses: ['MBA', 'M.Com', 'CA Final', 'CS Professional', 'CMA'],
-    collegeTypes: ['Management', 'Commerce']
+    courses: [
+      { code: 'MBA', name: 'MBA', tags: ['business', 'management'] },
+      { code: 'MCOM', name: 'M.Com', tags: ['commerce', 'accounting'] },
+      { code: 'CA_FINAL', name: 'CA Final', tags: ['accounting', 'finance'] },
+      { code: 'CS_PROF', name: 'CS Professional', tags: ['corporate', 'law'] },
+      { code: 'CMA', name: 'CMA', tags: ['cost', 'management'] },
+    ],
+    collegeTypes: ['management', 'commerce']
   },
   // UG Arts
   'ug_arts': {
-    courses: ['MA', 'MSW', 'MFA', 'M.Des', 'LLB', 'LLM'],
-    collegeTypes: ['Arts', 'Social Sciences', 'Fine Arts', 'Humanities']
+    courses: [
+      { code: 'MA', name: 'MA', tags: ['arts', 'humanities'] },
+      { code: 'MSW', name: 'MSW (Social Work)', tags: ['social', 'welfare'] },
+      { code: 'MFA', name: 'MFA (Fine Arts)', tags: ['creative', 'arts'] },
+      { code: 'MDES', name: 'M.Des', tags: ['design', 'creative'] },
+      { code: 'LLB', name: 'LLB', tags: ['law', 'legal'] },
+      { code: 'LLM', name: 'LLM', tags: ['law', 'legal', 'masters'] },
+    ],
+    collegeTypes: ['arts', 'social sciences', 'fine arts', 'law']
   },
   // UG Science
   'ug_science': {
-    courses: ['M.Sc', 'M.Tech', 'MBA', 'PhD'],
-    collegeTypes: ['Science', 'Engineering & Technology', 'Management']
+    courses: [
+      { code: 'MSC', name: 'M.Sc', tags: ['science', 'research'] },
+      { code: 'MTECH', name: 'M.Tech', tags: ['technology', 'engineering'] },
+      { code: 'MBA', name: 'MBA', tags: ['management', 'business'] },
+      { code: 'PHD', name: 'PhD', tags: ['research', 'academic'] },
+    ],
+    collegeTypes: ['science', 'engineering', 'management']
   },
 };
 
-// Nearby states mapping
+// Nearby states mapping for location filtering
 const NEARBY_STATES_MAP: Record<string, string[]> = {
   'Andhra Pradesh': ['Telangana', 'Karnataka', 'Tamil Nadu', 'Odisha', 'Chhattisgarh'],
   'Arunachal Pradesh': ['Assam', 'Nagaland'],
@@ -141,13 +212,15 @@ export interface RecommendedCollege {
   confidence_score: number;
   match_reason: string;
   is_user_state: boolean;
+  matched_course?: string;
 }
 
 export interface FutureCourse {
+  code: string;
   name: string;
-  description: string;
-  entranceExams: string[];
-  collegeTypes: string[];
+  score: number;
+  reason: string;
+  tags: string[];
 }
 
 interface Profile {
@@ -159,6 +232,7 @@ interface Profile {
   study_area: string | null;
   class_level: string | null;
   target_course_interest: string[] | null;
+  interests: string[] | null;
   logical_score: number | null;
   numerical_score: number | null;
   technical_score: number | null;
@@ -167,59 +241,72 @@ interface Profile {
   overall_score: number | null;
 }
 
-// Determine user's stream from profile
+// Determine user's stream strictly from profile
 const determineUserStream = (profile: Profile): string => {
-  const currentCourse = profile.current_course?.toLowerCase() || '';
-  const studyArea = profile.study_area?.toLowerCase() || '';
+  const currentCourse = (profile.current_course || '').toLowerCase();
+  const studyArea = (profile.study_area || '').toLowerCase();
   const targetCourses = profile.target_course_interest || [];
   
-  // Check current course keywords
+  // CS/IT detection
   if (currentCourse.includes('cse') || currentCourse.includes('computer') || 
-      currentCourse.includes('it') || currentCourse.includes('bca') ||
-      currentCourse.includes('software') || currentCourse.includes('data')) {
+      currentCourse.includes(' it') || currentCourse.includes('bca') ||
+      currentCourse.includes('software') || currentCourse.includes('data') ||
+      currentCourse.includes('information technology') || currentCourse.includes('mca')) {
     return 'Computer Science';
   }
   
+  // Medical/PCB detection
   if (currentCourse.includes('pcb') || currentCourse.includes('medical') ||
       currentCourse.includes('mbbs') || currentCourse.includes('nursing') ||
-      currentCourse.includes('pharmacy') || currentCourse.includes('biology')) {
+      currentCourse.includes('pharmacy') || currentCourse.includes('biology') ||
+      currentCourse.includes('bds') || currentCourse.includes('physiotherapy')) {
     return 'Medical';
   }
   
+  // Commerce detection
   if (currentCourse.includes('commerce') || currentCourse.includes('bba') ||
-      currentCourse.includes('bcom') || currentCourse.includes('ca')) {
+      currentCourse.includes('bcom') || currentCourse.includes('b.com') ||
+      currentCourse.includes(' ca ') || currentCourse.includes('accounting')) {
     return 'Commerce';
   }
   
+  // Arts detection
   if (currentCourse.includes('arts') || currentCourse.includes('humanities') ||
-      currentCourse.includes('ba ') || currentCourse.includes('design')) {
+      currentCourse.includes(' ba ') || currentCourse.includes('design') ||
+      currentCourse.includes('law') || currentCourse.includes('llb')) {
     return 'Arts';
   }
   
-  if (currentCourse.includes('pcm') || currentCourse.includes('engineering') ||
-      currentCourse.includes('btech') || currentCourse.includes('b.tech')) {
+  // Engineering (non-CS)
+  if (currentCourse.includes('engineering') || currentCourse.includes('btech') ||
+      currentCourse.includes('b.tech') || currentCourse.includes('mechanical') ||
+      currentCourse.includes('electrical') || currentCourse.includes('civil')) {
+    // If PCM but not specifically CS
+    if (currentCourse.includes('pcm') || studyArea === 'science') {
+      return 'Engineering';
+    }
     return 'Engineering';
   }
   
-  // Check study area
+  // Study area fallback
   if (studyArea === 'science') {
-    // Check aptitude to differentiate CS vs Medical
-    if ((profile.technical_score || 0) > (profile.creative_score || 0)) {
+    const techScore = profile.technical_score || 0;
+    const numScore = profile.numerical_score || 0;
+    if (techScore >= 60 || numScore >= 60) {
       return 'Engineering';
     }
     return 'Science';
   }
-  
   if (studyArea === 'commerce') return 'Commerce';
   if (studyArea === 'arts') return 'Arts';
   
-  // Default based on target courses
+  // Target courses check
   for (const target of targetCourses) {
     const t = target.toLowerCase();
-    if (t.includes('tech') || t.includes('computer') || t.includes('it')) return 'Computer Science';
-    if (t.includes('medical') || t.includes('mbbs') || t.includes('nursing')) return 'Medical';
-    if (t.includes('commerce') || t.includes('bba')) return 'Commerce';
-    if (t.includes('arts') || t.includes('design')) return 'Arts';
+    if (t.includes('tech') || t.includes('computer') || t.includes('it') || t.includes('cse')) return 'Computer Science';
+    if (t.includes('medical') || t.includes('mbbs') || t.includes('nursing') || t.includes('pharmacy')) return 'Medical';
+    if (t.includes('commerce') || t.includes('bba') || t.includes('mba')) return 'Commerce';
+    if (t.includes('arts') || t.includes('design') || t.includes('law')) return 'Arts';
   }
   
   return 'Science'; // Default
@@ -227,12 +314,12 @@ const determineUserStream = (profile: Profile): string => {
 
 // Determine education level key for future course mapping
 const getEducationLevelKey = (profile: Profile, stream: string): string => {
-  const level = profile.current_study_level?.toLowerCase() || '';
-  const classLevel = profile.class_level?.toLowerCase() || '';
-  const currentCourse = profile.current_course?.toLowerCase() || '';
+  const level = (profile.current_study_level || '').toLowerCase();
+  const classLevel = (profile.class_level || '').toLowerCase();
+  const currentCourse = (profile.current_course || '').toLowerCase();
   
-  // Check if 12th class
-  if (level.includes('12') || classLevel.includes('12') || level.includes('intermediate')) {
+  // 12th Class
+  if (level.includes('12') || classLevel.includes('12') || level.includes('intermediate') || level.includes('hsc')) {
     if (stream === 'Computer Science' || stream === 'Engineering' || currentCourse.includes('pcm')) {
       return '12th_science_pcm';
     }
@@ -241,12 +328,12 @@ const getEducationLevelKey = (profile: Profile, stream: string): string => {
     }
     if (stream === 'Commerce') return '12th_commerce';
     if (stream === 'Arts') return '12th_arts';
-    return '12th_science_pcm'; // Default for science
+    return '12th_science_pcm';
   }
   
   // Diploma
-  if (level.includes('diploma')) {
-    if (stream === 'Computer Science' || currentCourse.includes('cs') || currentCourse.includes('it')) {
+  if (level.includes('diploma') || currentCourse.includes('diploma')) {
+    if (stream === 'Computer Science' || currentCourse.includes('cs') || currentCourse.includes(' it')) {
       return 'diploma_cs';
     }
     return 'diploma_engineering';
@@ -254,7 +341,8 @@ const getEducationLevelKey = (profile: Profile, stream: string): string => {
   
   // UG level
   if (level.includes('ug') || level.includes('undergraduate') || level.includes('bachelor') ||
-      classLevel.includes('ug') || currentCourse.includes('b.tech') || currentCourse.includes('btech')) {
+      classLevel.includes('ug') || currentCourse.includes('b.tech') || currentCourse.includes('btech') ||
+      currentCourse.includes('bca') || currentCourse.includes('bsc') || currentCourse.includes('bcom')) {
     if (stream === 'Computer Science') return 'ug_cs';
     if (stream === 'Medical') return 'ug_medical';
     if (stream === 'Commerce') return 'ug_commerce';
@@ -262,11 +350,23 @@ const getEducationLevelKey = (profile: Profile, stream: string): string => {
     return 'ug_science';
   }
   
-  // Default to 12th science PCM
-  return '12th_science_pcm';
+  // PG level (suggest PhD or further specializations)
+  if (level.includes('pg') || level.includes('postgraduate') || level.includes('master')) {
+    return 'ug_science'; // Will suggest PhD-level courses
+  }
+  
+  // 10th class - suggest diploma or 12th
+  if (level.includes('10') || classLevel.includes('10')) {
+    return '12th_science_pcm'; // Default to science stream
+  }
+  
+  return '12th_science_pcm'; // Default
 };
 
-// Calculate recommendation score
+/**
+ * Calculate match score using the formula:
+ * finalScore = (0.45 * aptitudeScoreMatch) + (0.30 * courseInterestMatch) + (0.15 * stateDistrictMatch) + (0.10 * streamMatch)
+ */
 const calculateRecommendationScore = (
   college: any,
   profile: Profile,
@@ -274,57 +374,143 @@ const calculateRecommendationScore = (
   isUserState: boolean,
   isUserDistrict: boolean
 ): { score: number; reason: string } => {
-  let score = 0;
   const reasons: string[] = [];
   
-  // Location match (30% weight)
-  if (isUserDistrict) {
-    score += 30;
-    reasons.push('Located in your district');
-  } else if (isUserState) {
-    score += 25;
-    reasons.push('Located in your state');
+  // 1. Aptitude Score Match (45% weight) - based on dominant skills
+  let aptitudeMatch = 0;
+  const techScore = profile.technical_score || 0;
+  const numScore = profile.numerical_score || 0;
+  const logicalScore = profile.logical_score || 0;
+  const verbalScore = profile.verbal_score || 0;
+  const creativeScore = profile.creative_score || 0;
+  
+  // Map stream to required skills
+  if (userStream === 'Computer Science' || userStream === 'Engineering') {
+    aptitudeMatch = (techScore * 0.5 + numScore * 0.3 + logicalScore * 0.2);
+  } else if (userStream === 'Medical') {
+    aptitudeMatch = (logicalScore * 0.4 + numScore * 0.3 + verbalScore * 0.3);
+  } else if (userStream === 'Commerce') {
+    aptitudeMatch = (numScore * 0.4 + verbalScore * 0.3 + logicalScore * 0.3);
+  } else if (userStream === 'Arts') {
+    aptitudeMatch = (creativeScore * 0.4 + verbalScore * 0.4 + logicalScore * 0.2);
   } else {
-    score += 10;
-    reasons.push('Nearby state');
+    aptitudeMatch = (logicalScore + numScore + techScore + verbalScore + creativeScore) / 5;
   }
   
-  // Stream match (45% weight)
-  const specialization = college.specialised_in?.toLowerCase() || '';
-  const streamKeywords = STREAM_COLLEGE_MAPPING[userStream] || [];
-  const streamMatch = streamKeywords.some(keyword => 
-    specialization.includes(keyword.toLowerCase())
-  );
+  if (aptitudeMatch >= 70) reasons.push('Strong aptitude match');
   
-  if (streamMatch) {
-    score += 45;
-    reasons.push(`Specializes in ${userStream}`);
-  } else {
-    score += 15;
-  }
+  // 2. Course Interest Match (30% weight)
+  let courseInterestMatch = 30; // Base match
+  const targetCourses = profile.target_course_interest || [];
+  const collegeSpecialization = (college.specialised_in || '').toLowerCase();
+  const collegeCoursesStr = (college.courses_offered || []).join(' ').toLowerCase();
   
-  // Rating bonus (15% weight)
-  if (college.rating) {
-    const ratingScore = Math.min(15, (college.rating / 5) * 15);
-    score += ratingScore;
-    if (college.rating >= 4) {
-      reasons.push(`High rating: ${college.rating.toFixed(1)}`);
+  for (const target of targetCourses) {
+    if (collegeSpecialization.includes(target.toLowerCase()) || 
+        collegeCoursesStr.includes(target.toLowerCase())) {
+      courseInterestMatch = 100;
+      reasons.push(`Offers ${target}`);
+      break;
     }
   }
   
-  // Aptitude alignment (10% weight)
-  const aptitudeScore = profile.overall_score || 0;
-  if (aptitudeScore > 70) {
-    score += 10;
-  } else if (aptitudeScore > 50) {
-    score += 7;
+  // 3. State/District Match (15% weight)
+  let stateDistrictMatch = 0;
+  if (isUserDistrict) {
+    stateDistrictMatch = 100;
+    reasons.push('In your district');
+  } else if (isUserState) {
+    stateDistrictMatch = 80;
+    reasons.push('In your state');
   } else {
-    score += 3;
+    stateDistrictMatch = 40;
+    reasons.push('Nearby state');
   }
   
+  // 4. Stream Match (10% weight)
+  let streamMatch = 0;
+  const streamKeywords = STREAM_COLLEGE_MAPPING[userStream] || [];
+  const matchesStream = streamKeywords.some(keyword => 
+    collegeSpecialization.includes(keyword) || 
+    (college.college_type || '').toLowerCase().includes(keyword)
+  );
+  
+  if (matchesStream) {
+    streamMatch = 100;
+    reasons.push(`${userStream} specialization`);
+  } else {
+    streamMatch = 20;
+  }
+  
+  // Rating bonus (additional factor)
+  if (college.rating && college.rating >= 4) {
+    reasons.push(`Rating: ${college.rating.toFixed(1)}`);
+  }
+  
+  // Calculate final score with weights
+  const finalScore = 
+    (0.45 * aptitudeMatch) +
+    (0.30 * courseInterestMatch) +
+    (0.15 * stateDistrictMatch) +
+    (0.10 * streamMatch);
+  
   return {
-    score: Math.min(100, Math.round(score)),
-    reason: reasons.slice(0, 2).join(' • ') || 'General recommendation'
+    score: Math.min(100, Math.round(finalScore)),
+    reason: reasons.slice(0, 3).join(' • ') || 'General recommendation'
+  };
+};
+
+/**
+ * Calculate course recommendation score
+ */
+const calculateCourseScore = (
+  course: { code: string; name: string; tags: string[] },
+  profile: Profile
+): { score: number; reason: string } => {
+  const reasons: string[] = [];
+  
+  // Aptitude-based scoring
+  const techScore = profile.technical_score || 0;
+  const numScore = profile.numerical_score || 0;
+  const logicalScore = profile.logical_score || 0;
+  const verbalScore = profile.verbal_score || 0;
+  const creativeScore = profile.creative_score || 0;
+  
+  let aptitudeMatch = 0;
+  const tags = course.tags.join(' ').toLowerCase();
+  
+  if (tags.includes('technical') || tags.includes('coding') || tags.includes('computer')) {
+    aptitudeMatch = (techScore * 0.6 + numScore * 0.3 + logicalScore * 0.1);
+    if (techScore >= 70) reasons.push('Strong technical skills');
+  } else if (tags.includes('medical') || tags.includes('pharmacy')) {
+    aptitudeMatch = (logicalScore * 0.4 + numScore * 0.3 + verbalScore * 0.3);
+    if (logicalScore >= 70) reasons.push('Strong logical reasoning');
+  } else if (tags.includes('business') || tags.includes('management') || tags.includes('finance')) {
+    aptitudeMatch = (verbalScore * 0.4 + numScore * 0.4 + logicalScore * 0.2);
+    if (verbalScore >= 70) reasons.push('Strong verbal skills');
+  } else if (tags.includes('creative') || tags.includes('design') || tags.includes('arts')) {
+    aptitudeMatch = (creativeScore * 0.5 + verbalScore * 0.3 + logicalScore * 0.2);
+    if (creativeScore >= 70) reasons.push('Strong creative skills');
+  } else {
+    aptitudeMatch = (logicalScore + numScore + techScore + verbalScore + creativeScore) / 5;
+  }
+  
+  // Interest match
+  const interests = profile.interests || profile.target_course_interest || [];
+  let interestMatch = 30;
+  for (const interest of interests) {
+    if (tags.includes(interest.toLowerCase()) || course.name.toLowerCase().includes(interest.toLowerCase())) {
+      interestMatch = 100;
+      reasons.push(`Matches your interest in ${interest}`);
+      break;
+    }
+  }
+  
+  const finalScore = (0.60 * aptitudeMatch) + (0.40 * interestMatch);
+  
+  return {
+    score: Math.min(100, Math.round(finalScore)),
+    reason: reasons.join(' • ') || 'Suitable for your profile'
   };
 };
 
@@ -354,6 +540,7 @@ export const useStreamBasedRecommendations = () => {
       if (profileError) throw profileError;
       if (!profileData) {
         setError('Profile not found');
+        setLoading(false);
         return;
       }
       
@@ -363,20 +550,55 @@ export const useStreamBasedRecommendations = () => {
       const stream = determineUserStream(profileData);
       setUserStream(stream);
       
-      console.log('[StreamRecommendations] User stream:', stream);
-      console.log('[StreamRecommendations] Profile:', profileData);
+      // Get education level key
+      const eduLevelKey = getEducationLevelKey(profileData, stream);
       
-      // Get stream-specific college types to search for
+      console.log('[StreamRecommendations] User stream:', stream);
+      console.log('[StreamRecommendations] Education level key:', eduLevelKey);
+      console.log('[StreamRecommendations] Current course:', profileData.current_course);
+      
+      // Get future courses (excluding current course)
+      const futureMapping = FUTURE_COURSE_MAPPING[eduLevelKey];
+      if (futureMapping) {
+        const currentCourse = (profileData.current_course || '').toLowerCase();
+        
+        // Filter out current course and score remaining
+        const scoredCourses = futureMapping.courses
+          .filter(course => {
+            const courseLower = course.name.toLowerCase();
+            const codeLower = course.code.toLowerCase();
+            // Exclude if current course matches
+            return !currentCourse.includes(courseLower.split(' ')[0]) &&
+                   !currentCourse.includes(codeLower);
+          })
+          .map(course => {
+            const { score, reason } = calculateCourseScore(course, profileData);
+            return {
+              code: course.code,
+              name: course.name,
+              score,
+              reason,
+              tags: course.tags
+            };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 7);
+        
+        setFutureCourses(scoredCourses);
+        console.log('[StreamRecommendations] Future courses:', scoredCourses.length);
+      }
+      
+      // Get stream-specific college types
       const streamCollegeTypes = STREAM_COLLEGE_MAPPING[stream] || [];
       
-      // Determine location filters
+      // Location filters
       const userState = profileData.preferred_state;
       const userDistrict = profileData.preferred_district;
       const nearbyStates = userState ? (NEARBY_STATES_MAP[userState] || []) : [];
       const allStates = userState ? [userState, ...nearbyStates] : [];
       
       console.log('[StreamRecommendations] Filtering by state:', userState);
-      console.log('[StreamRecommendations] College types:', streamCollegeTypes);
+      console.log('[StreamRecommendations] Stream college types:', streamCollegeTypes);
       
       // Build query for colleges
       let query = supabase
@@ -391,26 +613,23 @@ export const useStreamBasedRecommendations = () => {
       
       const { data: collegesData, error: collegesError } = await query
         .order('rating', { ascending: false, nullsFirst: false })
-        .limit(100);
+        .limit(200);
       
       if (collegesError) throw collegesError;
       
-      // Filter and score colleges
+      // Filter and score colleges STRICTLY by stream
       const scoredColleges: RecommendedCollege[] = (collegesData || [])
         .filter(college => {
-          // Check if college matches stream
-          const specialization = college.specialised_in?.toLowerCase() || '';
-          const matchesStream = streamCollegeTypes.some(type => 
-            specialization.includes(type.toLowerCase())
-          );
+          const specialization = (college.specialised_in || '').toLowerCase();
+          const collegeType = (college.college_type || '').toLowerCase();
+          const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
           
-          // Also check college_type for broader matches
-          const collegeType = college.college_type?.toLowerCase() || '';
-          const matchesType = streamCollegeTypes.some(type =>
-            collegeType.includes(type.toLowerCase())
+          // STRICT stream matching
+          return streamCollegeTypes.some(type => 
+            specialization.includes(type) || 
+            collegeType.includes(type) ||
+            coursesStr.includes(type)
           );
-          
-          return matchesStream || matchesType;
         })
         .map(college => {
           const isUserState = college.state === userState;
@@ -442,65 +661,19 @@ export const useStreamBasedRecommendations = () => {
           };
         })
         .sort((a, b) => {
-          // Priority: user state first, then by score
+          // Priority: user state > user district > score
           if (a.is_user_state && !b.is_user_state) return -1;
           if (!a.is_user_state && b.is_user_state) return 1;
           return b.confidence_score - a.confidence_score;
-        });
+        })
+        .slice(0, 50); // Top 50 recommendations
       
       console.log('[StreamRecommendations] Filtered colleges:', scoredColleges.length);
-      
-      // If no stream-specific colleges, get general colleges
-      if (scoredColleges.length === 0 && collegesData && collegesData.length > 0) {
-        const fallbackColleges = collegesData.slice(0, 20).map(college => {
-          const isUserState = college.state === userState;
-          return {
-            id: college.id,
-            college_name: college.college_name || 'Unknown College',
-            state: college.state || 'Unknown',
-            district: college.district || 'Unknown',
-            specialised_in: college.specialised_in || '',
-            college_type: college.college_type || '',
-            rating: college.rating,
-            fees: college.fees,
-            website: college.website,
-            admission_link: college.admission_link,
-            courses_offered: college.courses_offered || [],
-            confidence_score: 60,
-            match_reason: 'Top-rated college in your area',
-            is_user_state: isUserState
-          };
-        });
-        setColleges(fallbackColleges);
-      } else {
-        setColleges(scoredColleges.slice(0, 15));
-      }
-      
-      // Generate future course recommendations
-      const educationKey = getEducationLevelKey(profileData, stream);
-      const futureMapping = FUTURE_COURSE_MAPPING[educationKey];
-      
-      if (futureMapping) {
-        const currentCourse = profileData.current_course?.toLowerCase() || '';
-        
-        // Filter out current course from recommendations
-        const filteredCourses = futureMapping.courses.filter(course => 
-          !currentCourse.includes(course.toLowerCase().split(' ')[0])
-        );
-        
-        const futureCourseRecs: FutureCourse[] = filteredCourses.map(course => ({
-          name: course,
-          description: getFutureCourseDescription(course),
-          entranceExams: getEntranceExams(course),
-          collegeTypes: futureMapping.collegeTypes
-        }));
-        
-        setFutureCourses(futureCourseRecs);
-      }
+      setColleges(scoredColleges);
       
     } catch (err) {
       console.error('[StreamRecommendations] Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load recommendations');
+      setError('Failed to load recommendations');
     } finally {
       setLoading(false);
     }
@@ -517,53 +690,6 @@ export const useStreamBasedRecommendations = () => {
     userStream,
     loading,
     error,
-    refresh: loadRecommendations
+    refreshRecommendations: loadRecommendations
   };
 };
-
-// Helper functions
-function getFutureCourseDescription(course: string): string {
-  const descriptions: Record<string, string> = {
-    'B.Tech CSE': 'Bachelor of Technology in Computer Science - 4 year program focusing on software development and computing',
-    'B.Tech IT': 'Bachelor of Technology in Information Technology - 4 year program for IT professionals',
-    'B.Tech AI/ML': 'Specialized engineering degree in Artificial Intelligence and Machine Learning',
-    'BCA': 'Bachelor of Computer Applications - 3 year undergraduate program in computer science',
-    'MBBS': 'Bachelor of Medicine and Bachelor of Surgery - 5.5 year medical degree',
-    'BDS': 'Bachelor of Dental Surgery - 5 year dental degree',
-    'BAMS': 'Bachelor of Ayurvedic Medicine and Surgery - 5.5 year Ayurvedic medicine degree',
-    'B.Pharm': 'Bachelor of Pharmacy - 4 year pharmaceutical science degree',
-    'Nursing': 'B.Sc Nursing - 4 year nursing degree program',
-    'B.Com': 'Bachelor of Commerce - 3 year commerce undergraduate program',
-    'BBA': 'Bachelor of Business Administration - 3 year management program',
-    'BA': 'Bachelor of Arts - 3 year arts undergraduate program',
-    'M.Tech CSE': 'Master of Technology in Computer Science - 2 year postgraduate engineering',
-    'MCA': 'Master of Computer Applications - 2 year postgraduate program',
-    'MBA': 'Master of Business Administration - 2 year management postgraduate',
-    'MBA (IT)': 'MBA with IT specialization for tech management roles',
-  };
-  return descriptions[course] || `${course} - Higher education program for career advancement`;
-}
-
-function getEntranceExams(course: string): string[] {
-  const exams: Record<string, string[]> = {
-    'B.Tech CSE': ['JEE Main', 'JEE Advanced', 'State CETs'],
-    'B.Tech IT': ['JEE Main', 'JEE Advanced', 'State CETs'],
-    'B.Tech AI/ML': ['JEE Main', 'JEE Advanced'],
-    'BCA': ['IPU CET', 'CUET', 'University entrance'],
-    'MBBS': ['NEET UG'],
-    'BDS': ['NEET UG'],
-    'BAMS': ['NEET UG'],
-    'B.Pharm': ['GPAT', 'State pharmacy exams'],
-    'Nursing': ['NEET UG', 'State nursing exams'],
-    'B.Com': ['CUET', 'DU JAT', 'University entrance'],
-    'BBA': ['IPMAT', 'CUET', 'SET'],
-    'BA': ['CUET', 'University entrance'],
-    'M.Tech CSE': ['GATE'],
-    'MCA': ['NIMCET', 'TANCET', 'MAH MCA CET'],
-    'MBA': ['CAT', 'XAT', 'MAT', 'GMAT'],
-    'MBA (IT)': ['CAT', 'XAT', 'MAT'],
-  };
-  return exams[course] || ['University entrance exam'];
-}
-
-export default useStreamBasedRecommendations;
