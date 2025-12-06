@@ -13,6 +13,7 @@ import {
   Users,
   Star
 } from "lucide-react";
+import avsarLogo from "@/assets/avsar-logo.png";
 
 const Landing = () => {
   return (
@@ -23,6 +24,15 @@ const Landing = () => {
       <section className="relative py-20 md:py-32 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-8">
+            {/* Hero Logo */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src={avsarLogo} 
+                alt="AVSAR - Career & Education Advisor" 
+                className="w-32 h-32 md:w-40 md:h-40 object-contain animate-fade-in"
+                loading="eager"
+              />
+            </div>
             <h1 className="font-heading font-bold text-4xl md:text-6xl leading-tight">
               Discover Your Perfect
               <span className="text-primary"> Career Path </span>

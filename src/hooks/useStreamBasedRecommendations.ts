@@ -32,7 +32,6 @@ const STREAM_COLLEGE_MAPPING: Record<string, string[]> = {
 
 // Future course recommendations (NO current course duplication)
 const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: string; tags: string[] }[]; collegeTypes: string[] }> = {
-  // Class 12 Science (PCM)
   '12th_science_pcm': {
     courses: [
       { code: 'BTECH_CSE', name: 'B.Tech Computer Science', tags: ['technical', 'coding', 'software'] },
@@ -46,7 +45,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['engineering', 'technology', 'bca', 'science', 'architecture']
   },
-  // Class 12 Science (PCB)
   '12th_science_pcb': {
     courses: [
       { code: 'MBBS', name: 'MBBS', tags: ['medical', 'doctor'] },
@@ -60,7 +58,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['medical', 'allopathy', 'ayurveda', 'pharmacy', 'nursing', 'paramedical']
   },
-  // Class 12 Commerce
   '12th_commerce': {
     courses: [
       { code: 'BCOM', name: 'B.Com', tags: ['commerce', 'accounting'] },
@@ -72,7 +69,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['commerce', 'management', 'bba']
   },
-  // Class 12 Arts
   '12th_arts': {
     courses: [
       { code: 'BA', name: 'BA', tags: ['arts', 'humanities'] },
@@ -85,7 +81,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['arts', 'humanities', 'social sciences', 'fine arts', 'law']
   },
-  // Diploma CS/IT
   'diploma_cs': {
     courses: [
       { code: 'BTECH_LE_CSE', name: 'B.Tech CSE (Lateral Entry)', tags: ['technical', 'coding'] },
@@ -95,7 +90,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['engineering', 'technology', 'bca', 'computer']
   },
-  // Diploma Engineering (other)
   'diploma_engineering': {
     courses: [
       { code: 'BTECH_LE', name: 'B.Tech (Lateral Entry)', tags: ['engineering', 'technical'] },
@@ -103,7 +97,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['engineering', 'technology']
   },
-  // UG Computer Science (B.Tech CSE, BCA, B.Sc CS)
   'ug_cs': {
     courses: [
       { code: 'MTECH_CSE', name: 'M.Tech CSE', tags: ['technical', 'advanced', 'computer'] },
@@ -115,7 +108,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['engineering', 'technology', 'management']
   },
-  // UG Medical/Biology
   'ug_medical': {
     courses: [
       { code: 'MD', name: 'MD (Doctor of Medicine)', tags: ['medical', 'specialist'] },
@@ -126,7 +118,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['medical', 'allopathy', 'nursing', 'pharmacy']
   },
-  // UG Commerce (B.Com, BBA)
   'ug_commerce': {
     courses: [
       { code: 'MBA', name: 'MBA', tags: ['business', 'management'] },
@@ -137,7 +128,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['management', 'commerce']
   },
-  // UG Arts
   'ug_arts': {
     courses: [
       { code: 'MA', name: 'MA', tags: ['arts', 'humanities'] },
@@ -149,7 +139,6 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
     ],
     collegeTypes: ['arts', 'social sciences', 'fine arts', 'law']
   },
-  // UG Science
   'ug_science': {
     courses: [
       { code: 'MSC', name: 'M.Sc', tags: ['science', 'research'] },
@@ -161,7 +150,7 @@ const FUTURE_COURSE_MAPPING: Record<string, { courses: { code: string; name: str
   },
 };
 
-// Nearby states mapping for location filtering
+// Complete nearby states mapping for all Indian states
 const NEARBY_STATES_MAP: Record<string, string[]> = {
   'Andhra Pradesh': ['Telangana', 'Karnataka', 'Tamil Nadu', 'Odisha', 'Chhattisgarh'],
   'Arunachal Pradesh': ['Assam', 'Nagaland'],
@@ -197,6 +186,9 @@ const NEARBY_STATES_MAP: Record<string, string[]> = {
   'Puducherry': ['Tamil Nadu'],
 };
 
+// Location priority levels for scoring
+type LocationPriority = 'district' | 'state' | 'nearby' | 'nationwide';
+
 export interface RecommendedCollege {
   id: string;
   college_name: string;
@@ -213,6 +205,7 @@ export interface RecommendedCollege {
   match_reason: string;
   is_user_state: boolean;
   matched_course?: string;
+  location_priority: LocationPriority;
 }
 
 export interface FutureCourse {
@@ -281,7 +274,6 @@ const determineUserStream = (profile: Profile): string => {
   if (currentCourse.includes('engineering') || currentCourse.includes('btech') ||
       currentCourse.includes('b.tech') || currentCourse.includes('mechanical') ||
       currentCourse.includes('electrical') || currentCourse.includes('civil')) {
-    // If PCM but not specifically CS
     if (currentCourse.includes('pcm') || studyArea === 'science') {
       return 'Engineering';
     }
@@ -350,17 +342,50 @@ const getEducationLevelKey = (profile: Profile, stream: string): string => {
     return 'ug_science';
   }
   
-  // PG level (suggest PhD or further specializations)
+  // PG level
   if (level.includes('pg') || level.includes('postgraduate') || level.includes('master')) {
-    return 'ug_science'; // Will suggest PhD-level courses
+    return 'ug_science';
   }
   
-  // 10th class - suggest diploma or 12th
+  // 10th class
   if (level.includes('10') || classLevel.includes('10')) {
-    return '12th_science_pcm'; // Default to science stream
+    return '12th_science_pcm';
   }
   
-  return '12th_science_pcm'; // Default
+  return '12th_science_pcm';
+};
+
+/**
+ * Get location priority for a college
+ */
+const getLocationPriority = (
+  collegeState: string | null,
+  collegeDistrict: string | null,
+  userState: string | null,
+  userDistrict: string | null,
+  nearbyStates: string[]
+): LocationPriority => {
+  if (!collegeState) return 'nationwide';
+  
+  const collegeSt = collegeState.toLowerCase().trim();
+  const userSt = (userState || '').toLowerCase().trim();
+  const collegeDist = (collegeDistrict || '').toLowerCase().trim();
+  const userDist = (userDistrict || '').toLowerCase().trim();
+  
+  // 1. Check district match (highest priority)
+  if (userSt && collegeSt === userSt) {
+    if (userDist && collegeDist && collegeDist === userDist) {
+      return 'district';
+    }
+    return 'state';
+  }
+  
+  // 2. Check nearby states
+  if (nearbyStates.some(ns => ns.toLowerCase().trim() === collegeSt)) {
+    return 'nearby';
+  }
+  
+  return 'nationwide';
 };
 
 /**
@@ -371,12 +396,11 @@ const calculateRecommendationScore = (
   college: any,
   profile: Profile,
   userStream: string,
-  isUserState: boolean,
-  isUserDistrict: boolean
+  locationPriority: LocationPriority
 ): { score: number; reason: string } => {
   const reasons: string[] = [];
   
-  // 1. Aptitude Score Match (45% weight) - based on dominant skills
+  // 1. Aptitude Score Match (45% weight)
   let aptitudeMatch = 0;
   const techScore = profile.technical_score || 0;
   const numScore = profile.numerical_score || 0;
@@ -384,7 +408,6 @@ const calculateRecommendationScore = (
   const verbalScore = profile.verbal_score || 0;
   const creativeScore = profile.creative_score || 0;
   
-  // Map stream to required skills
   if (userStream === 'Computer Science' || userStream === 'Engineering') {
     aptitudeMatch = (techScore * 0.5 + numScore * 0.3 + logicalScore * 0.2);
   } else if (userStream === 'Medical') {
@@ -400,7 +423,7 @@ const calculateRecommendationScore = (
   if (aptitudeMatch >= 70) reasons.push('Strong aptitude match');
   
   // 2. Course Interest Match (30% weight)
-  let courseInterestMatch = 30; // Base match
+  let courseInterestMatch = 30;
   const targetCourses = profile.target_course_interest || [];
   const collegeSpecialization = (college.specialised_in || '').toLowerCase();
   const collegeCoursesStr = (college.courses_offered || []).join(' ').toLowerCase();
@@ -414,17 +437,25 @@ const calculateRecommendationScore = (
     }
   }
   
-  // 3. State/District Match (15% weight)
+  // 3. State/District Match (15% weight) - STRICT LOCATION PRIORITY
   let stateDistrictMatch = 0;
-  if (isUserDistrict) {
-    stateDistrictMatch = 100;
-    reasons.push('In your district');
-  } else if (isUserState) {
-    stateDistrictMatch = 80;
-    reasons.push('In your state');
-  } else {
-    stateDistrictMatch = 40;
-    reasons.push('Nearby state');
+  switch (locationPriority) {
+    case 'district':
+      stateDistrictMatch = 100;
+      reasons.push('In your district');
+      break;
+    case 'state':
+      stateDistrictMatch = 80;
+      reasons.push('In your state');
+      break;
+    case 'nearby':
+      stateDistrictMatch = 50;
+      reasons.push('Nearby state');
+      break;
+    case 'nationwide':
+      stateDistrictMatch = 20; // Penalty for nationwide
+      reasons.push('All India');
+      break;
   }
   
   // 4. Stream Match (10% weight)
@@ -442,17 +473,22 @@ const calculateRecommendationScore = (
     streamMatch = 20;
   }
   
-  // Rating bonus (additional factor)
+  // Rating bonus
   if (college.rating && college.rating >= 4) {
     reasons.push(`Rating: ${college.rating.toFixed(1)}`);
   }
   
-  // Calculate final score with weights
-  const finalScore = 
+  // Calculate final score
+  let finalScore = 
     (0.45 * aptitudeMatch) +
     (0.30 * courseInterestMatch) +
     (0.15 * stateDistrictMatch) +
     (0.10 * streamMatch);
+  
+  // Apply penalty for nationwide colleges (-20 points)
+  if (locationPriority === 'nationwide') {
+    finalScore = Math.max(0, finalScore - 20);
+  }
   
   return {
     score: Math.min(100, Math.round(finalScore)),
@@ -469,7 +505,6 @@ const calculateCourseScore = (
 ): { score: number; reason: string } => {
   const reasons: string[] = [];
   
-  // Aptitude-based scoring
   const techScore = profile.technical_score || 0;
   const numScore = profile.numerical_score || 0;
   const logicalScore = profile.logical_score || 0;
@@ -495,7 +530,6 @@ const calculateCourseScore = (
     aptitudeMatch = (logicalScore + numScore + techScore + verbalScore + creativeScore) / 5;
   }
   
-  // Interest match
   const interests = profile.interests || profile.target_course_interest || [];
   let interestMatch = 30;
   for (const interest of interests) {
@@ -555,19 +589,18 @@ export const useStreamBasedRecommendations = () => {
       
       console.log('[StreamRecommendations] User stream:', stream);
       console.log('[StreamRecommendations] Education level key:', eduLevelKey);
-      console.log('[StreamRecommendations] Current course:', profileData.current_course);
+      console.log('[StreamRecommendations] User state:', profileData.preferred_state);
+      console.log('[StreamRecommendations] User district:', profileData.preferred_district);
       
       // Get future courses (excluding current course)
       const futureMapping = FUTURE_COURSE_MAPPING[eduLevelKey];
       if (futureMapping) {
         const currentCourse = (profileData.current_course || '').toLowerCase();
         
-        // Filter out current course and score remaining
         const scoredCourses = futureMapping.courses
           .filter(course => {
             const courseLower = course.name.toLowerCase();
             const codeLower = course.code.toLowerCase();
-            // Exclude if current course matches
             return !currentCourse.includes(courseLower.split(' ')[0]) &&
                    !currentCourse.includes(codeLower);
           })
@@ -591,85 +624,206 @@ export const useStreamBasedRecommendations = () => {
       // Get stream-specific college types
       const streamCollegeTypes = STREAM_COLLEGE_MAPPING[stream] || [];
       
-      // Location filters
+      // Location filters - STRICT PRIORITY ORDER
       const userState = profileData.preferred_state;
       const userDistrict = profileData.preferred_district;
       const nearbyStates = userState ? (NEARBY_STATES_MAP[userState] || []) : [];
-      const allStates = userState ? [userState, ...nearbyStates] : [];
       
-      console.log('[StreamRecommendations] Filtering by state:', userState);
-      console.log('[StreamRecommendations] Stream college types:', streamCollegeTypes);
+      console.log('[StreamRecommendations] Nearby states:', nearbyStates);
       
-      // Build query for colleges
-      let query = supabase
-        .from('colleges')
-        .select('*')
-        .eq('is_active', true);
+      let allColleges: RecommendedCollege[] = [];
       
-      // Filter by state if available
-      if (allStates.length > 0) {
-        query = query.in('state', allStates);
+      // STEP 1: Fetch colleges from user's state FIRST (mandatory first layer)
+      if (userState) {
+        const { data: stateColleges, error: stateError } = await supabase
+          .from('colleges')
+          .select('*')
+          .eq('is_active', true)
+          .ilike('state', userState)
+          .order('rating', { ascending: false, nullsFirst: false })
+          .limit(100);
+        
+        if (!stateError && stateColleges) {
+          const filteredStateColleges = stateColleges
+            .filter(college => {
+              const specialization = (college.specialised_in || '').toLowerCase();
+              const collegeType = (college.college_type || '').toLowerCase();
+              const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
+              
+              return streamCollegeTypes.some(type => 
+                specialization.includes(type) || 
+                collegeType.includes(type) ||
+                coursesStr.includes(type)
+              );
+            })
+            .map(college => {
+              const locationPriority = getLocationPriority(
+                college.state, college.district, userState, userDistrict, nearbyStates
+              );
+              const { score, reason } = calculateRecommendationScore(
+                college, profileData, stream, locationPriority
+              );
+              
+              return {
+                id: college.id,
+                college_name: college.college_name || 'Unknown College',
+                state: college.state || 'Unknown',
+                district: college.district || 'Unknown',
+                specialised_in: college.specialised_in || '',
+                college_type: college.college_type || '',
+                rating: college.rating,
+                fees: college.fees,
+                website: college.website,
+                admission_link: college.admission_link,
+                courses_offered: college.courses_offered || [],
+                confidence_score: score,
+                match_reason: reason,
+                is_user_state: true,
+                location_priority: locationPriority
+              };
+            });
+          
+          allColleges = [...filteredStateColleges];
+          console.log('[StreamRecommendations] State colleges found:', filteredStateColleges.length);
+        }
       }
       
-      const { data: collegesData, error: collegesError } = await query
-        .order('rating', { ascending: false, nullsFirst: false })
-        .limit(200);
-      
-      if (collegesError) throw collegesError;
-      
-      // Filter and score colleges STRICTLY by stream
-      const scoredColleges: RecommendedCollege[] = (collegesData || [])
-        .filter(college => {
-          const specialization = (college.specialised_in || '').toLowerCase();
-          const collegeType = (college.college_type || '').toLowerCase();
-          const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
+      // STEP 2: If less than 5 colleges, fetch from nearby states
+      if (allColleges.length < 5 && nearbyStates.length > 0) {
+        const { data: nearbyColleges, error: nearbyError } = await supabase
+          .from('colleges')
+          .select('*')
+          .eq('is_active', true)
+          .in('state', nearbyStates)
+          .order('rating', { ascending: false, nullsFirst: false })
+          .limit(50);
+        
+        if (!nearbyError && nearbyColleges) {
+          const filteredNearbyColleges = nearbyColleges
+            .filter(college => {
+              const specialization = (college.specialised_in || '').toLowerCase();
+              const collegeType = (college.college_type || '').toLowerCase();
+              const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
+              
+              return streamCollegeTypes.some(type => 
+                specialization.includes(type) || 
+                collegeType.includes(type) ||
+                coursesStr.includes(type)
+              );
+            })
+            .filter(college => !allColleges.find(c => c.id === college.id))
+            .map(college => {
+              const locationPriority = getLocationPriority(
+                college.state, college.district, userState, userDistrict, nearbyStates
+              );
+              const { score, reason } = calculateRecommendationScore(
+                college, profileData, stream, locationPriority
+              );
+              
+              return {
+                id: college.id,
+                college_name: college.college_name || 'Unknown College',
+                state: college.state || 'Unknown',
+                district: college.district || 'Unknown',
+                specialised_in: college.specialised_in || '',
+                college_type: college.college_type || '',
+                rating: college.rating,
+                fees: college.fees,
+                website: college.website,
+                admission_link: college.admission_link,
+                courses_offered: college.courses_offered || [],
+                confidence_score: score,
+                match_reason: reason,
+                is_user_state: false,
+                location_priority: locationPriority
+              };
+            });
           
-          // STRICT stream matching
-          return streamCollegeTypes.some(type => 
-            specialization.includes(type) || 
-            collegeType.includes(type) ||
-            coursesStr.includes(type)
-          );
-        })
-        .map(college => {
-          const isUserState = college.state === userState;
-          const isUserDistrict = college.district === userDistrict && isUserState;
-          
-          const { score, reason } = calculateRecommendationScore(
-            college,
-            profileData,
-            stream,
-            isUserState,
-            isUserDistrict
-          );
-          
-          return {
-            id: college.id,
-            college_name: college.college_name || 'Unknown College',
-            state: college.state || 'Unknown',
-            district: college.district || 'Unknown',
-            specialised_in: college.specialised_in || '',
-            college_type: college.college_type || '',
-            rating: college.rating,
-            fees: college.fees,
-            website: college.website,
-            admission_link: college.admission_link,
-            courses_offered: college.courses_offered || [],
-            confidence_score: score,
-            match_reason: reason,
-            is_user_state: isUserState
-          };
-        })
-        .sort((a, b) => {
-          // Priority: user state > user district > score
-          if (a.is_user_state && !b.is_user_state) return -1;
-          if (!a.is_user_state && b.is_user_state) return 1;
-          return b.confidence_score - a.confidence_score;
-        })
-        .slice(0, 50); // Top 50 recommendations
+          allColleges = [...allColleges, ...filteredNearbyColleges];
+          console.log('[StreamRecommendations] Nearby colleges added:', filteredNearbyColleges.length);
+        }
+      }
       
-      console.log('[StreamRecommendations] Filtered colleges:', scoredColleges.length);
-      setColleges(scoredColleges);
+      // STEP 3: ONLY if still less than 5, fetch nationwide with penalty
+      if (allColleges.length < 5) {
+        const existingStates = userState ? [userState, ...nearbyStates] : [];
+        
+        let nationwideQuery = supabase
+          .from('colleges')
+          .select('*')
+          .eq('is_active', true)
+          .order('rating', { ascending: false, nullsFirst: false })
+          .limit(30);
+        
+        if (existingStates.length > 0) {
+          nationwideQuery = nationwideQuery.not('state', 'in', `(${existingStates.join(',')})`);
+        }
+        
+        const { data: nationwideColleges, error: nationwideError } = await nationwideQuery;
+        
+        if (!nationwideError && nationwideColleges) {
+          const filteredNationwideColleges = nationwideColleges
+            .filter(college => {
+              const specialization = (college.specialised_in || '').toLowerCase();
+              const collegeType = (college.college_type || '').toLowerCase();
+              const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
+              
+              return streamCollegeTypes.some(type => 
+                specialization.includes(type) || 
+                collegeType.includes(type) ||
+                coursesStr.includes(type)
+              );
+            })
+            .filter(college => !allColleges.find(c => c.id === college.id))
+            .slice(0, 10 - allColleges.length)
+            .map(college => {
+              const { score, reason } = calculateRecommendationScore(
+                college, profileData, stream, 'nationwide'
+              );
+              
+              return {
+                id: college.id,
+                college_name: college.college_name || 'Unknown College',
+                state: college.state || 'Unknown',
+                district: college.district || 'Unknown',
+                specialised_in: college.specialised_in || '',
+                college_type: college.college_type || '',
+                rating: college.rating,
+                fees: college.fees,
+                website: college.website,
+                admission_link: college.admission_link,
+                courses_offered: college.courses_offered || [],
+                confidence_score: score,
+                match_reason: reason,
+                is_user_state: false,
+                location_priority: 'nationwide' as LocationPriority
+              };
+            });
+          
+          allColleges = [...allColleges, ...filteredNationwideColleges];
+          console.log('[StreamRecommendations] Nationwide colleges added:', filteredNationwideColleges.length);
+        }
+      }
+      
+      // Sort by: location priority FIRST, then by score
+      const sortedColleges = allColleges.sort((a, b) => {
+        // Priority order: district > state > nearby > nationwide
+        const priorityOrder: Record<LocationPriority, number> = {
+          'district': 1,
+          'state': 2,
+          'nearby': 3,
+          'nationwide': 4
+        };
+        
+        if (priorityOrder[a.location_priority] !== priorityOrder[b.location_priority]) {
+          return priorityOrder[a.location_priority] - priorityOrder[b.location_priority];
+        }
+        
+        return b.confidence_score - a.confidence_score;
+      }).slice(0, 50);
+      
+      console.log('[StreamRecommendations] Total colleges:', sortedColleges.length);
+      setColleges(sortedColleges);
       
     } catch (err) {
       console.error('[StreamRecommendations] Error:', err);
