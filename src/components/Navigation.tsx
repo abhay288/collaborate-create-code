@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/NotificationBell";
+import avsarLogo from "@/assets/avsar-logo.png";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,11 +25,14 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all animate-pulse-glow">
-              <span className="text-primary-foreground font-bold text-lg">A</span>
-            </div>
-            <span className="font-heading font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Avsar
+            <img 
+              src={avsarLogo} 
+              alt="AVSAR Logo" 
+              className="w-10 h-10 md:w-12 md:h-12 object-contain group-hover:scale-110 transition-transform"
+              loading="lazy"
+            />
+            <span className="font-heading font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hidden sm:inline">
+              AVSAR
             </span>
           </Link>
 
