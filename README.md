@@ -1,6 +1,6 @@
 # AVSAR – One-Stop Personalized Career & Education Advisor
 
-![AVSAR Logo](./avsar_logo.png)
+![AVSAR Logo](https://ibb.co/DH8LLtYc)
 
 AVSAR is an AI-powered career guidance and educational recommendation platform designed to help students after **10th, 12th, and Graduation** make informed decisions about their **career paths, courses, colleges, and scholarships**.
 
