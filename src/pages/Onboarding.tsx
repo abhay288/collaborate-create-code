@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowRight, ArrowLeft, School, Building2, GraduationCap, Target, BookOpen, Calendar, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import AvsarLogo from "@/components/AvsarLogo";
 
 // Study level options organized by category
 const STUDY_LEVEL_OPTIONS = {
@@ -285,6 +286,9 @@ const Onboarding = () => {
       <Card className="w-full max-w-2xl border-primary/20 shadow-2xl">
         <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-t-lg">
           <div className="space-y-4">
+            <div className="flex justify-center mb-2">
+              <AvsarLogo size="lg" linkTo="" />
+            </div>
             <div className="flex justify-between items-center">
               <CardTitle className="text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Welcome to Avsar

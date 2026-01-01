@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useQuizSession } from "@/hooks/useQuizSession";
 import { useCareerRecommendations } from "@/hooks/useCareerRecommendations";
 import { supabase } from "@/integrations/supabase/client";
+import AvsarLogo from "@/components/AvsarLogo";
 
 interface QuizQuestion {
   id: string;
@@ -451,9 +452,12 @@ export default function Quiz() {
         {/* Header */}
         <div className="mb-8 animate-fade-up">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Aptitude Assessment
-            </h1>
+            <div className="flex items-center gap-4">
+              <AvsarLogo size="md" showText={false} />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Aptitude Assessment
+              </h1>
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-5 w-5" />
