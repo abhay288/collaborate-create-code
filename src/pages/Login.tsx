@@ -11,6 +11,7 @@ import { loginSchema, type LoginFormData } from "@/lib/validations";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import AvsarLogo from "@/components/AvsarLogo";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -48,12 +49,9 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <Link to="/" className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">A</span>
-            </div>
-            <span className="font-heading font-bold text-2xl">Avsar</span>
-          </Link>
+          <div className="flex justify-center mb-4">
+            <AvsarLogo size="lg" />
+          </div>
           <CardTitle className="text-2xl font-heading font-bold text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
             Sign in to your account to continue your journey

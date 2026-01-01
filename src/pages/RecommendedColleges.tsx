@@ -18,6 +18,7 @@ import {
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useStreamBasedRecommendations } from "@/hooks/useStreamBasedRecommendations";
+import AvsarVerifiedBadge from "@/components/AvsarVerifiedBadge";
 
 const RecommendedColleges = () => {
   const { 
@@ -220,9 +221,12 @@ const RecommendedColleges = () => {
                     <Card key={college.id} className="hover:shadow-lg transition-shadow border-primary/10">
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="text-lg line-clamp-2">
-                            {college.college_name}
-                          </CardTitle>
+                          <div className="flex-1">
+                            <CardTitle className="text-lg line-clamp-2">
+                              {college.college_name}
+                            </CardTitle>
+                            <AvsarVerifiedBadge className="mt-1" />
+                          </div>
                           <Badge variant="secondary" className="flex items-center gap-1 shrink-0">
                             {college.confidence_score}% match
                           </Badge>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
+import avsarLogo from "@/assets/avsar-logo.png";
 
 const Footer = () => {
   return (
@@ -9,9 +10,12 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">A</span>
-              </div>
+              <img 
+                src={avsarLogo} 
+                alt="Avsar Logo" 
+                className="w-8 h-8 object-contain grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all"
+                loading="lazy"
+              />
               <span className="font-heading font-bold text-xl">Avsar</span>
             </Link>
             <p className="text-muted-foreground text-sm">

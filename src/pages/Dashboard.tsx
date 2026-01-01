@@ -37,6 +37,7 @@ import { useVerifiedJobs } from "@/hooks/useVerifiedJobs";
 import { useVerifiedScholarships } from "@/hooks/useVerifiedScholarships";
 import { useStreamBasedRecommendations } from "@/hooks/useStreamBasedRecommendations";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
+import AvsarVerifiedBadge from "@/components/AvsarVerifiedBadge";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -529,7 +530,10 @@ const Dashboard = () => {
                         <Card key={college.id} className="hover:shadow-lg transition-shadow">
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-semibold text-foreground line-clamp-2">{college.college_name}</h3>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-foreground line-clamp-2">{college.college_name}</h3>
+                                <AvsarVerifiedBadge className="mt-1" />
+                              </div>
                               <Badge variant="secondary" className="ml-2 shrink-0">
                                 {college.confidence_score}% match
                               </Badge>

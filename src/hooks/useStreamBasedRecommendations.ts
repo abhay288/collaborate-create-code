@@ -624,27 +624,30 @@ export const useStreamBasedRecommendations = () => {
       // Get stream-specific college types
       const streamCollegeTypes = STREAM_COLLEGE_MAPPING[stream] || [];
       
-      // Location filters - STRICT PRIORITY ORDER
+      // Location filters - STRICT PRIORITY ORDER: STATE → DISTRICT → NEARBY
       const userState = profileData.preferred_state;
       const userDistrict = profileData.preferred_district;
       const nearbyStates = userState ? (NEARBY_STATES_MAP[userState] || []) : [];
       
+      console.log('[StreamRecommendations] User state:', userState);
+      console.log('[StreamRecommendations] User district:', userDistrict);
       console.log('[StreamRecommendations] Nearby states:', nearbyStates);
       
       let allColleges: RecommendedCollege[] = [];
       
-      // STEP 1: Fetch colleges from user's state FIRST (mandatory first layer)
-      if (userState) {
-        const { data: stateColleges, error: stateError } = await supabase
+      // STEP 1: First try exact DISTRICT match within user's STATE
+      if (userState && userDistrict) {
+        const { data: districtColleges, error: districtError } = await supabase
           .from('colleges')
           .select('*')
           .eq('is_active', true)
           .ilike('state', userState)
+          .ilike('district', userDistrict)
           .order('rating', { ascending: false, nullsFirst: false })
-          .limit(100);
+          .limit(50);
         
-        if (!stateError && stateColleges) {
-          const filteredStateColleges = stateColleges
+        if (!districtError && districtColleges) {
+          const filteredDistrictColleges = districtColleges
             .filter(college => {
               const specialization = (college.specialised_in || '').toLowerCase();
               const collegeType = (college.college_type || '').toLowerCase();
@@ -657,11 +660,8 @@ export const useStreamBasedRecommendations = () => {
               );
             })
             .map(college => {
-              const locationPriority = getLocationPriority(
-                college.state, college.district, userState, userDistrict, nearbyStates
-              );
               const { score, reason } = calculateRecommendationScore(
-                college, profileData, stream, locationPriority
+                college, profileData, stream, 'district'
               );
               
               return {
@@ -679,12 +679,72 @@ export const useStreamBasedRecommendations = () => {
                 confidence_score: score,
                 match_reason: reason,
                 is_user_state: true,
-                location_priority: locationPriority
+                location_priority: 'district' as LocationPriority
               };
             });
           
-          allColleges = [...filteredStateColleges];
-          console.log('[StreamRecommendations] State colleges found:', filteredStateColleges.length);
+          allColleges = [...filteredDistrictColleges];
+          console.log('[StreamRecommendations] District colleges found:', filteredDistrictColleges.length);
+        }
+      }
+      
+      // STEP 2: If district has < 5 results, fetch rest of STATE colleges (excluding district already fetched)
+      if (allColleges.length < 5 && userState) {
+        let stateQuery = supabase
+          .from('colleges')
+          .select('*')
+          .eq('is_active', true)
+          .ilike('state', userState)
+          .order('rating', { ascending: false, nullsFirst: false })
+          .limit(100);
+        
+        // Exclude the district we already fetched
+        if (userDistrict && allColleges.length > 0) {
+          stateQuery = stateQuery.not('district', 'ilike', userDistrict);
+        }
+        
+        const { data: stateColleges, error: stateError } = await stateQuery;
+        
+        if (!stateError && stateColleges) {
+          const filteredStateColleges = stateColleges
+            .filter(college => {
+              const specialization = (college.specialised_in || '').toLowerCase();
+              const collegeType = (college.college_type || '').toLowerCase();
+              const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
+              
+              return streamCollegeTypes.some(type => 
+                specialization.includes(type) || 
+                collegeType.includes(type) ||
+                coursesStr.includes(type)
+              );
+            })
+            .filter(college => !allColleges.find(c => c.id === college.id))
+            .map(college => {
+              const { score, reason } = calculateRecommendationScore(
+                college, profileData, stream, 'state'
+              );
+              
+              return {
+                id: college.id,
+                college_name: college.college_name || 'Unknown College',
+                state: college.state || 'Unknown',
+                district: college.district || 'Unknown',
+                specialised_in: college.specialised_in || '',
+                college_type: college.college_type || '',
+                rating: college.rating,
+                fees: college.fees,
+                website: college.website,
+                admission_link: college.admission_link,
+                courses_offered: college.courses_offered || [],
+                confidence_score: score,
+                match_reason: reason,
+                is_user_state: true,
+                location_priority: 'state' as LocationPriority
+              };
+            });
+          
+          allColleges = [...allColleges, ...filteredStateColleges];
+          console.log('[StreamRecommendations] State colleges added:', filteredStateColleges.length);
         }
       }
       

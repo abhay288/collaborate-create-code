@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, TrendingUp, Share2, Download, RotateCcw, Loader2 } from "lucide-react";
+import { Trophy, TrendingUp, Share2, Download, RotateCcw, Loader2, Home } from "lucide-react";
 import { toast } from "sonner";
 import {
   ChartContainer,
@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCareerRecommendations } from "@/hooks/useCareerRecommendations";
 import { useOpportunityMapping } from "@/hooks/useOpportunityMapping";
 import OpportunityRecommendations from "@/components/OpportunityRecommendations";
+import AvsarLogo from "@/components/AvsarLogo";
 
 const categoryDescriptions: Record<string, string> = {
   "logical": "Your ability to think systematically and solve problems using logic and deduction.",
@@ -193,6 +194,9 @@ export default function QuizResults() {
       <div className="container max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-up">
+          <div className="flex justify-center mb-4">
+            <AvsarLogo size="xl" />
+          </div>
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 mb-4 animate-pulse-glow">
             <Trophy className="h-10 w-10 text-primary animate-float" />
           </div>
