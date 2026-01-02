@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
-import avsarLogo from "@/assets/avsar-logo.png";
+import AvsarLogo from "@/components/AvsarLogo";
 
 const Footer = () => {
   return (
@@ -10,28 +10,23 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
-              <img 
-                src={avsarLogo} 
-                alt="Avsar Logo" 
-                className="w-8 h-8 object-contain grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all"
-                loading="lazy"
-              />
+              <AvsarLogo size="sm" showText={false} className="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" />
               <span className="font-heading font-bold text-xl">Avsar</span>
             </Link>
             <p className="text-muted-foreground text-sm">
               AI-powered career and education guidance platform helping students make informed decisions.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
                 <Facebook size={20} />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter">
                 <Twitter size={20} />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="LinkedIn">
                 <Linkedin size={20} />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
                 <Instagram size={20} />
               </a>
             </div>
@@ -96,8 +91,8 @@ const Footer = () => {
             <h3 className="font-heading font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-muted-foreground text-sm">
               <li>Email: support@avsar.com</li>
-              <li>Phone: +1 (555) 123-4567</li>
-              <li>Address: 123 Education St, Learning City</li>
+              <li>Phone: +91 (555) 123-4567</li>
+              <li>Address: 123 Education St, Learning City, India</li>
             </ul>
           </div>
         </div>
