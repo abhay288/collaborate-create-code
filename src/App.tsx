@@ -27,6 +27,14 @@ const Colleges = lazy(() => import("./pages/Colleges"));
 const Scholarships = lazy(() => import("./pages/Scholarships"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Public static pages
+const About = lazy(() => import("./pages/static/About"));
+const Features = lazy(() => import("./pages/static/Features"));
+const Contact = lazy(() => import("./pages/static/Contact"));
+const HelpCenter = lazy(() => import("./pages/static/HelpCenter"));
+const PrivacyPolicy = lazy(() => import("./pages/static/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/static/TermsOfService"));
+
 // Admin pages
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -62,6 +70,14 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              
+              {/* Public static pages */}
+              <Route path="/about" element={<About />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/help" element={<HelpCenter />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
