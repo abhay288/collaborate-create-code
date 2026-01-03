@@ -1,12 +1,19 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import AvsarLogo from "@/components/AvsarLogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield } from "lucide-react";
+import { CONTACT_EMAIL, CONTACT_ADDRESS } from "@/lib/constants";
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead 
+        title="Privacy Policy - AVSAR | Data Protection & Security"
+        description="Read AVSAR's privacy policy to understand how we collect, use, and protect your personal information. We are committed to student data privacy and security."
+        keywords="avsar privacy policy, data protection, student data security, career guidance privacy, education platform privacy"
+      />
       <Navigation />
       
       <main className="flex-1">
@@ -113,7 +120,7 @@ const PrivacyPolicy = () => {
               
               <h3>AI Services</h3>
               <p>
-                We use OpenAI's GPT models to generate personalized career descriptions and 
+                We use AI models to generate personalized career descriptions and 
                 recommendations. When processing your data through AI services, we only share 
                 the minimum necessary information (aptitude scores, interests) without 
                 personally identifiable details.
@@ -169,8 +176,8 @@ const PrivacyPolicy = () => {
                 contact us at:
               </p>
               <ul>
-                <li>Email: privacy@avsar.com</li>
-                <li>Address: 123 Education Street, Learning City, India</li>
+                <li>Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+                <li>Address: {CONTACT_ADDRESS}</li>
               </ul>
             </CardContent>
           </Card>

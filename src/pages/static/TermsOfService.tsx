@@ -1,12 +1,19 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import AvsarLogo from "@/components/AvsarLogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
+import { CONTACT_EMAIL, CONTACT_ADDRESS } from "@/lib/constants";
 
 const TermsOfService = () => {
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead 
+        title="Terms of Service - AVSAR | Usage Agreement"
+        description="Read AVSAR's terms of service to understand the acceptable use policy, recommendation disclaimers, and user responsibilities when using our career guidance platform."
+        keywords="avsar terms of service, usage agreement, career guidance terms, education platform terms, user agreement"
+      />
       <Navigation />
       
       <main className="flex-1">
@@ -216,8 +223,8 @@ const TermsOfService = () => {
                 For questions about these Terms, please contact us at:
               </p>
               <ul>
-                <li>Email: legal@avsar.com</li>
-                <li>Address: 123 Education Street, Learning City, India</li>
+                <li>Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+                <li>Address: {CONTACT_ADDRESS}</li>
               </ul>
             </CardContent>
           </Card>

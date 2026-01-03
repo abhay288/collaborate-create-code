@@ -1,5 +1,6 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import AvsarLogo from "@/components/AvsarLogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Target, Users, Brain, Award, Lightbulb, GraduationCap } from "lucide-react";
@@ -7,6 +8,11 @@ import { Target, Users, Brain, Award, Lightbulb, GraduationCap } from "lucide-re
 const About = () => {
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead 
+        title="About AVSAR - AI Career & Education Guidance Platform"
+        description="Learn about AVSAR's mission to democratize career guidance through AI. We help students discover their potential with personalized recommendations for careers, colleges, and scholarships."
+        keywords="about avsar, career guidance platform, AI education, student guidance India, personalized career recommendations, college finder"
+      />
       <Navigation />
       
       <main className="flex-1">
