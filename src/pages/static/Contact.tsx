@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import AvsarLogo from "@/components/AvsarLogo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, MapPin, Send, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS, SUPPORT_HOURS } from "@/lib/constants";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -23,16 +26,30 @@ const Contact = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success("Message sent successfully! We'll get back to you soon.");
-    setFormData({ name: "", email: "", subject: "", message: "" });
-    setIsSubmitting(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-contact-email", {
+        body: formData
+      });
+
+      if (error) throw error;
+
+      toast.success("Message sent successfully! We'll get back to you soon.");
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      toast.error(error.message || "Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead 
+        title="Contact Us - AVSAR | AI Career & Education Guidance"
+        description="Get in touch with the AVSAR team. Have questions about career guidance, college recommendations, or scholarships? We're here to help students make informed decisions."
+        keywords="contact avsar, career guidance help, education support, college recommendation help, scholarship queries, student support India"
+      />
       <Navigation />
       
       <main className="flex-1">
@@ -135,7 +152,9 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold">Email Us</h3>
-                      <p className="text-muted-foreground">support@avsar.com</p>
+                      <a href={`mailto:${CONTACT_EMAIL}`} className="text-muted-foreground hover:text-primary transition-colors">
+                        {CONTACT_EMAIL}
+                      </a>
                     </div>
                   </CardContent>
                 </Card>
@@ -147,7 +166,9 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold">Call Us</h3>
-                      <p className="text-muted-foreground">+91 (555) 123-4567</p>
+                      <a href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`} className="text-muted-foreground hover:text-primary transition-colors">
+                        {CONTACT_PHONE}
+                      </a>
                     </div>
                   </CardContent>
                 </Card>
@@ -159,7 +180,7 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold">Visit Us</h3>
-                      <p className="text-muted-foreground">123 Education Street, Learning City, India</p>
+                      <p className="text-muted-foreground">{CONTACT_ADDRESS}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -169,9 +190,9 @@ const Contact = () => {
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-2">Support Hours</h3>
                   <div className="space-y-1 text-sm text-muted-foreground">
-                    <p>Monday - Friday: 9:00 AM - 6:00 PM IST</p>
-                    <p>Saturday: 10:00 AM - 4:00 PM IST</p>
-                    <p>Sunday: Closed</p>
+                    <p>{SUPPORT_HOURS.weekdays}</p>
+                    <p>{SUPPORT_HOURS.saturday}</p>
+                    <p>{SUPPORT_HOURS.sunday}</p>
                   </div>
                 </CardContent>
               </Card>

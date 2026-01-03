@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import { 
   Brain, 
   GraduationCap, 
@@ -18,6 +19,12 @@ import avsarLogo from "@/assets/avsar-logo.png";
 const Landing = () => {
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead 
+        title="AVSAR - AI Career & Education Guidance | Find Your Perfect Path"
+        description="AVSAR is India's leading AI-powered career guidance platform. Take aptitude tests, get personalized career recommendations, discover colleges, and find scholarships - all for free."
+        keywords="career guidance, aptitude test, college finder, scholarship search, AI career recommendations, career counseling India, education guidance, IIT JEE, NEET preparation, career options after 12th"
+        ogType="website"
+      />
       <Navigation />
       
       {/* Hero Section */}

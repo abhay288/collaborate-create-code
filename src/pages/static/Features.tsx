@@ -1,7 +1,9 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import AvsarLogo from "@/components/AvsarLogo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { 
   Brain, 
   GraduationCap, 
@@ -84,6 +86,11 @@ const Features = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead 
+        title="Features - AVSAR | AI Career Guidance Platform"
+        description="Explore AVSAR's powerful features: AI aptitude quiz, personalized career recommendations, smart college finder, verified scholarships, and location-based suggestions for Indian students."
+        keywords="avsar features, AI aptitude test, career recommendations, college finder India, scholarship search, student dashboard, career guidance features"
+      />
       <Navigation />
       
       <main className="flex-1">
@@ -137,12 +144,12 @@ const Features = () => {
               Join thousands of students who are using Avsar to make informed career decisions. 
               Take the aptitude quiz and get personalized recommendations today.
             </p>
-            <a 
-              href="/register" 
+            <Link 
+              to="/register" 
               className="inline-flex items-center justify-center px-8 py-3 bg-background text-foreground rounded-lg font-semibold hover:bg-secondary transition-colors"
             >
               Get Started Free
-            </a>
+            </Link>
           </div>
         </section>
       </main>

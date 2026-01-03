@@ -12,7 +12,8 @@ import {
   Users, 
   Shield,
   TrendingUp,
-  ArrowRight
+  ArrowRight,
+  HelpCircle
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -103,6 +104,14 @@ const AdminDashboard = () => {
       link: '/admin/quiz-questions',
       stat: 'Dynamic Tests',
       color: 'text-indigo-600'
+    },
+    {
+      title: 'Manage FAQs',
+      description: 'Add, edit, and reorder Help Center FAQs',
+      icon: HelpCircle,
+      link: '/admin/faqs',
+      stat: 'Help Content',
+      color: 'text-cyan-600'
     },
     {
       title: 'ML Feedback Analytics',

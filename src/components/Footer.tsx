@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
 import AvsarLogo from "@/components/AvsarLogo";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS, SOCIAL_LINKS } from "@/lib/constants";
 
 const Footer = () => {
   return (
@@ -17,16 +18,16 @@ const Footer = () => {
               AI-powered career and education guidance platform helping students make informed decisions.
             </p>
             <div className="flex space-x-4">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
+              <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
                 <Facebook size={20} />
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter">
+              <a href={SOCIAL_LINKS.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter">
                 <Twitter size={20} />
               </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="LinkedIn">
+              <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="LinkedIn">
                 <Linkedin size={20} />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
+              <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
                 <Instagram size={20} />
               </a>
             </div>
@@ -90,9 +91,13 @@ const Footer = () => {
           <div>
             <h3 className="font-heading font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-muted-foreground text-sm">
-              <li>Email: support@avsar.com</li>
-              <li>Phone: +91 (555) 123-4567</li>
-              <li>Address: 123 Education St, Learning City, India</li>
+              <li>
+                Email: <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-primary transition-colors">{CONTACT_EMAIL}</a>
+              </li>
+              <li>
+                Phone: <a href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`} className="hover:text-primary transition-colors">{CONTACT_PHONE}</a>
+              </li>
+              <li>Address: {CONTACT_ADDRESS}</li>
             </ul>
           </div>
         </div>
