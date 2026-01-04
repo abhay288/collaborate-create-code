@@ -114,6 +114,14 @@ const AdminDashboard = () => {
       color: 'text-cyan-600'
     },
     {
+      title: 'Manage NGOs',
+      description: 'Educational NGOs directory management',
+      icon: Building2,
+      link: '/admin/ngos',
+      stat: 'Verified NGOs',
+      color: 'text-pink-600'
+    },
+    {
       title: 'ML Feedback Analytics',
       description: 'View user feedback and train recommendation models',
       icon: TrendingUp,

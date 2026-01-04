@@ -234,6 +234,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ngos: {
+        Row: {
+          apply_or_donate_link: string | null
+          created_at: string
+          email: string | null
+          hq_address: string | null
+          id: string
+          is_active: boolean | null
+          mission_summary: string
+          name: string
+          notes: string | null
+          phone: string | null
+          primary_focus: string
+          states_present: string[] | null
+          updated_at: string
+          verified: boolean | null
+          website: string
+        }
+        Insert: {
+          apply_or_donate_link?: string | null
+          created_at?: string
+          email?: string | null
+          hq_address?: string | null
+          id?: string
+          is_active?: boolean | null
+          mission_summary: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          primary_focus: string
+          states_present?: string[] | null
+          updated_at?: string
+          verified?: boolean | null
+          website: string
+        }
+        Update: {
+          apply_or_donate_link?: string | null
+          created_at?: string
+          email?: string | null
+          hq_address?: string | null
+          id?: string
+          is_active?: boolean | null
+          mission_summary?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          primary_focus?: string
+          states_present?: string[] | null
+          updated_at?: string
+          verified?: boolean | null
+          website?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
