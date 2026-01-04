@@ -46,7 +46,11 @@ const ManageVerifiedScholarships = lazy(() => import("./pages/admin/ManageVerifi
 const ManageVerifiedJobs = lazy(() => import("./pages/admin/ManageVerifiedJobs"));
 const ManageQuizQuestions = lazy(() => import("./pages/admin/ManageQuizQuestions"));
 const ManageFAQs = lazy(() => import("./pages/admin/ManageFAQs"));
+const ManageNGOs = lazy(() => import("./pages/admin/ManageNGOs"));
 const FeedbackAnalytics = lazy(() => import("./pages/admin/FeedbackAnalytics"));
+
+// Public pages
+const NGOs = lazy(() => import("./pages/NGOs"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -90,6 +94,7 @@ const App = () => (
               <Route path="/careers" element={<ProtectedRoute><Careers /></ProtectedRoute>} />
               <Route path="/colleges" element={<ProtectedRoute><Colleges /></ProtectedRoute>} />
               <Route path="/scholarships" element={<ProtectedRoute><Scholarships /></ProtectedRoute>} />
+              <Route path="/ngos" element={<NGOs />} />
               
               {/* Admin routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -102,6 +107,7 @@ const App = () => (
               <Route path="/admin/verified-jobs" element={<AdminRoute><ManageVerifiedJobs /></AdminRoute>} />
               <Route path="/admin/quiz-questions" element={<AdminRoute><ManageQuizQuestions /></AdminRoute>} />
               <Route path="/admin/faqs" element={<AdminRoute><ManageFAQs /></AdminRoute>} />
+              <Route path="/admin/ngos" element={<AdminRoute><ManageNGOs /></AdminRoute>} />
               <Route path="/admin/feedback-analytics" element={<AdminRoute><FeedbackAnalytics /></AdminRoute>} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

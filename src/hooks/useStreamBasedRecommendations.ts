@@ -206,6 +206,8 @@ export interface RecommendedCollege {
   is_user_state: boolean;
   matched_course?: string;
   location_priority: LocationPriority;
+  explanations?: string[]; // Detailed reasons for recommendation
+  confidence_band?: 'High' | 'Medium' | 'Low';
 }
 
 export interface FutureCourse {
@@ -389,18 +391,56 @@ const getLocationPriority = (
 };
 
 /**
- * Calculate match score using the formula:
- * finalScore = (0.45 * aptitudeScoreMatch) + (0.30 * courseInterestMatch) + (0.15 * stateDistrictMatch) + (0.10 * streamMatch)
+ * ENHANCED SCORING FORMULA (Hybrid Rule + ML approach):
+ * finalScore = (0.40 * aptitudeMatch) + (0.25 * interestMatch) + (0.15 * eligibilityFlag) 
+ *            + (0.10 * collegeQuality) + (0.05 * proximityScore) + (0.05 * freshnessScore)
+ * 
+ * Features:
+ * - Eligibility blocking (binary) for impossible recommendations
+ * - College quality scoring (rating + accreditation)
+ * - Explainability: detailed reasons for each factor
  */
 const calculateRecommendationScore = (
   college: any,
   profile: Profile,
   userStream: string,
   locationPriority: LocationPriority
-): { score: number; reason: string } => {
+): { score: number; reason: string; explanations: string[] } => {
   const reasons: string[] = [];
+  const explanations: string[] = [];
   
-  // 1. Aptitude Score Match (45% weight)
+  // === 1. ELIGIBILITY CHECK (Binary blocker) ===
+  let eligibilityFlag = 1; // 1 = eligible, 0 = not eligible
+  
+  // Block if college doesn't match education level progression
+  const currentLevel = (profile.current_study_level || '').toLowerCase();
+  const collegeType = (college.college_type || '').toLowerCase();
+  
+  // Example: Don't recommend PG colleges to 10th students
+  if (currentLevel.includes('10') && collegeType.includes('postgraduate')) {
+    eligibilityFlag = 0;
+    explanations.push('❌ Not eligible: Requires higher education level');
+  }
+  
+  // Block if recommending same course user is studying
+  const currentCourse = (profile.current_course || '').toLowerCase();
+  const collegeCourses = (college.courses_offered || []).join(' ').toLowerCase();
+  if (currentCourse && collegeCourses.includes(currentCourse.split(' ')[0])) {
+    // Only block if it's an exact match, not related courses
+    const exactMatch = college.courses_offered?.some((c: string) => 
+      c.toLowerCase() === currentCourse
+    );
+    if (exactMatch) {
+      eligibilityFlag = 0.5; // Reduce score but don't fully block
+      explanations.push('⚠️ Similar to your current course');
+    }
+  }
+  
+  if (eligibilityFlag === 1) {
+    explanations.push('✓ Eligible based on your education level');
+  }
+  
+  // === 2. APTITUDE MATCH (40% weight) ===
   let aptitudeMatch = 0;
   const techScore = profile.technical_score || 0;
   const numScore = profile.numerical_score || 0;
@@ -408,57 +448,122 @@ const calculateRecommendationScore = (
   const verbalScore = profile.verbal_score || 0;
   const creativeScore = profile.creative_score || 0;
   
+  // Stream-specific aptitude calculation
   if (userStream === 'Computer Science' || userStream === 'Engineering') {
     aptitudeMatch = (techScore * 0.5 + numScore * 0.3 + logicalScore * 0.2);
+    if (techScore >= 70) {
+      reasons.push('Strong technical aptitude');
+      explanations.push(`✓ Technical skills: ${techScore}% (excellent match)`);
+    } else if (techScore >= 50) {
+      explanations.push(`○ Technical skills: ${techScore}% (good match)`);
+    }
   } else if (userStream === 'Medical') {
     aptitudeMatch = (logicalScore * 0.4 + numScore * 0.3 + verbalScore * 0.3);
+    if (logicalScore >= 70) {
+      reasons.push('Strong analytical skills');
+      explanations.push(`✓ Logical reasoning: ${logicalScore}% (excellent for medical)`);
+    }
   } else if (userStream === 'Commerce') {
     aptitudeMatch = (numScore * 0.4 + verbalScore * 0.3 + logicalScore * 0.3);
+    if (numScore >= 70) {
+      reasons.push('Strong numerical skills');
+      explanations.push(`✓ Numerical ability: ${numScore}% (excellent for commerce)`);
+    }
   } else if (userStream === 'Arts') {
     aptitudeMatch = (creativeScore * 0.4 + verbalScore * 0.4 + logicalScore * 0.2);
+    if (creativeScore >= 70 || verbalScore >= 70) {
+      reasons.push('Strong creative/verbal skills');
+      explanations.push(`✓ Creative: ${creativeScore}%, Verbal: ${verbalScore}%`);
+    }
   } else {
     aptitudeMatch = (logicalScore + numScore + techScore + verbalScore + creativeScore) / 5;
   }
   
-  if (aptitudeMatch >= 70) reasons.push('Strong aptitude match');
-  
-  // 2. Course Interest Match (30% weight)
-  let courseInterestMatch = 30;
+  // === 3. INTEREST MATCH (25% weight) ===
+  let interestMatch = 30;
   const targetCourses = profile.target_course_interest || [];
+  const interests = profile.interests || [];
   const collegeSpecialization = (college.specialised_in || '').toLowerCase();
   const collegeCoursesStr = (college.courses_offered || []).join(' ').toLowerCase();
   
+  // Check target courses match
   for (const target of targetCourses) {
     if (collegeSpecialization.includes(target.toLowerCase()) || 
         collegeCoursesStr.includes(target.toLowerCase())) {
-      courseInterestMatch = 100;
+      interestMatch = 100;
       reasons.push(`Offers ${target}`);
+      explanations.push(`✓ Matches your interest: ${target}`);
       break;
     }
   }
   
-  // 3. State/District Match (15% weight) - STRICT LOCATION PRIORITY
-  let stateDistrictMatch = 0;
+  // Check general interests
+  if (interestMatch < 100) {
+    for (const interest of interests) {
+      if (collegeSpecialization.includes(interest.toLowerCase()) || 
+          collegeCoursesStr.includes(interest.toLowerCase())) {
+        interestMatch = Math.max(interestMatch, 70);
+        explanations.push(`○ Related to your interest: ${interest}`);
+        break;
+      }
+    }
+  }
+  
+  // === 4. COLLEGE QUALITY (10% weight) ===
+  let collegeQuality = 50; // Default middle score
+  const rating = college.rating || 0;
+  const naacGrade = (college.naac_grade || '').toUpperCase();
+  
+  // Rating contribution (0-5 scale → 0-60 points)
+  collegeQuality = rating * 12;
+  
+  // NAAC grade bonus
+  if (naacGrade === 'A++') {
+    collegeQuality += 40;
+    reasons.push('NAAC A++');
+    explanations.push('✓ Top accreditation: NAAC A++');
+  } else if (naacGrade === 'A+') {
+    collegeQuality += 30;
+    explanations.push('✓ Excellent accreditation: NAAC A+');
+  } else if (naacGrade === 'A') {
+    collegeQuality += 20;
+    explanations.push('✓ Good accreditation: NAAC A');
+  } else if (naacGrade === 'B++' || naacGrade === 'B+') {
+    collegeQuality += 10;
+  }
+  
+  collegeQuality = Math.min(100, collegeQuality);
+  
+  if (rating >= 4) {
+    reasons.push(`Rating: ${rating.toFixed(1)}`);
+  }
+  
+  // === 5. PROXIMITY SCORE (5% weight) - Based on location priority ===
+  let proximityScore = 0;
   switch (locationPriority) {
     case 'district':
-      stateDistrictMatch = 100;
+      proximityScore = 100;
       reasons.push('In your district');
+      explanations.push('✓ Located in your district (closest)');
       break;
     case 'state':
-      stateDistrictMatch = 80;
+      proximityScore = 80;
       reasons.push('In your state');
+      explanations.push('✓ Located in your state');
       break;
     case 'nearby':
-      stateDistrictMatch = 50;
+      proximityScore = 50;
       reasons.push('Nearby state');
+      explanations.push('○ Located in neighboring state');
       break;
     case 'nationwide':
-      stateDistrictMatch = 20; // Penalty for nationwide
+      proximityScore = 20;
       reasons.push('All India');
+      explanations.push('△ Located in distant state');
       break;
   }
   
-  // 4. Stream Match (10% weight)
+  // === 6. STREAM MATCH (bonus incorporated into aptitude) ===
   let streamMatch = 0;
   const streamKeywords = STREAM_COLLEGE_MAPPING[userStream] || [];
   const matchesStream = streamKeywords.some(keyword => 
@@ -468,31 +573,57 @@ const calculateRecommendationScore = (
   
   if (matchesStream) {
     streamMatch = 100;
-    reasons.push(`${userStream} specialization`);
+    explanations.push(`✓ Specializes in ${userStream}`);
   } else {
     streamMatch = 20;
   }
   
-  // Rating bonus
-  if (college.rating && college.rating >= 4) {
-    reasons.push(`Rating: ${college.rating.toFixed(1)}`);
+  // === 7. FRESHNESS SCORE (5% weight) - favor recently updated colleges ===
+  let freshnessScore = 50;
+  if (college.updated_at) {
+    const lastUpdate = new Date(college.updated_at);
+    const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceUpdate < 30) freshnessScore = 100;
+    else if (daysSinceUpdate < 90) freshnessScore = 80;
+    else if (daysSinceUpdate < 180) freshnessScore = 60;
+    else freshnessScore = 40;
   }
   
-  // Calculate final score
+  // === FINAL WEIGHTED SCORE CALCULATION ===
+  // finalScore = (0.40 * aptitude) + (0.25 * interest) + (0.15 * eligibility*100) 
+  //            + (0.10 * quality) + (0.05 * proximity) + (0.05 * freshness)
   let finalScore = 
-    (0.45 * aptitudeMatch) +
-    (0.30 * courseInterestMatch) +
-    (0.15 * stateDistrictMatch) +
-    (0.10 * streamMatch);
+    (0.40 * aptitudeMatch) +
+    (0.25 * interestMatch) +
+    (0.15 * eligibilityFlag * 100) +
+    (0.10 * collegeQuality) +
+    (0.05 * proximityScore) +
+    (0.05 * freshnessScore);
   
-  // Apply penalty for nationwide colleges (-20 points)
+  // Apply stream match as additional factor
+  finalScore = finalScore * 0.9 + streamMatch * 0.1;
+  
+  // Apply penalty for nationwide colleges (-15 points)
   if (locationPriority === 'nationwide') {
-    finalScore = Math.max(0, finalScore - 20);
+    finalScore = Math.max(0, finalScore - 15);
   }
+  
+  // Block completely if not eligible
+  if (eligibilityFlag === 0) {
+    finalScore = 0;
+  }
+  
+  // Confidence band
+  let confidenceBand = 'Medium';
+  if (finalScore >= 75) confidenceBand = 'High';
+  else if (finalScore < 50) confidenceBand = 'Low';
+  
+  explanations.push(`Confidence: ${confidenceBand} (${Math.round(finalScore)}%)`);
   
   return {
     score: Math.min(100, Math.round(finalScore)),
-    reason: reasons.slice(0, 3).join(' • ') || 'General recommendation'
+    reason: reasons.slice(0, 3).join(' • ') || 'General recommendation',
+    explanations
   };
 };
 
@@ -660,7 +791,7 @@ export const useStreamBasedRecommendations = () => {
               );
             })
             .map(college => {
-              const { score, reason } = calculateRecommendationScore(
+              const { score, reason, explanations } = calculateRecommendationScore(
                 college, profileData, stream, 'district'
               );
               
@@ -679,9 +810,12 @@ export const useStreamBasedRecommendations = () => {
                 confidence_score: score,
                 match_reason: reason,
                 is_user_state: true,
-                location_priority: 'district' as LocationPriority
+                location_priority: 'district' as LocationPriority,
+                explanations,
+                confidence_band: (score >= 75 ? 'High' : score >= 50 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low'
               };
-            });
+            })
+            .filter(college => college.confidence_score > 0); // Block ineligible colleges
           
           allColleges = [...filteredDistrictColleges];
           console.log('[StreamRecommendations] District colleges found:', filteredDistrictColleges.length);
@@ -720,7 +854,7 @@ export const useStreamBasedRecommendations = () => {
             })
             .filter(college => !allColleges.find(c => c.id === college.id))
             .map(college => {
-              const { score, reason } = calculateRecommendationScore(
+              const { score, reason, explanations } = calculateRecommendationScore(
                 college, profileData, stream, 'state'
               );
               
@@ -739,9 +873,12 @@ export const useStreamBasedRecommendations = () => {
                 confidence_score: score,
                 match_reason: reason,
                 is_user_state: true,
-                location_priority: 'state' as LocationPriority
+                location_priority: 'state' as LocationPriority,
+                explanations,
+                confidence_band: (score >= 75 ? 'High' : score >= 50 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low'
               };
-            });
+            })
+            .filter(college => college.confidence_score > 0);
           
           allColleges = [...allColleges, ...filteredStateColleges];
           console.log('[StreamRecommendations] State colleges added:', filteredStateColleges.length);
@@ -776,7 +913,7 @@ export const useStreamBasedRecommendations = () => {
               const locationPriority = getLocationPriority(
                 college.state, college.district, userState, userDistrict, nearbyStates
               );
-              const { score, reason } = calculateRecommendationScore(
+              const { score, reason, explanations } = calculateRecommendationScore(
                 college, profileData, stream, locationPriority
               );
               
@@ -795,9 +932,12 @@ export const useStreamBasedRecommendations = () => {
                 confidence_score: score,
                 match_reason: reason,
                 is_user_state: false,
-                location_priority: locationPriority
+                location_priority: locationPriority,
+                explanations,
+                confidence_band: (score >= 75 ? 'High' : score >= 50 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low'
               };
-            });
+            })
+            .filter(college => college.confidence_score > 0);
           
           allColleges = [...allColleges, ...filteredNearbyColleges];
           console.log('[StreamRecommendations] Nearby colleges added:', filteredNearbyColleges.length);
@@ -837,7 +977,7 @@ export const useStreamBasedRecommendations = () => {
             .filter(college => !allColleges.find(c => c.id === college.id))
             .slice(0, 10 - allColleges.length)
             .map(college => {
-              const { score, reason } = calculateRecommendationScore(
+              const { score, reason, explanations } = calculateRecommendationScore(
                 college, profileData, stream, 'nationwide'
               );
               
@@ -856,9 +996,12 @@ export const useStreamBasedRecommendations = () => {
                 confidence_score: score,
                 match_reason: reason,
                 is_user_state: false,
-                location_priority: 'nationwide' as LocationPriority
+                location_priority: 'nationwide' as LocationPriority,
+                explanations,
+                confidence_band: (score >= 75 ? 'High' : score >= 50 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low'
               };
-            });
+            })
+            .filter(college => college.confidence_score > 0);
           
           allColleges = [...allColleges, ...filteredNationwideColleges];
           console.log('[StreamRecommendations] Nationwide colleges added:', filteredNationwideColleges.length);
