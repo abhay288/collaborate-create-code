@@ -247,6 +247,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           primary_focus: string
+          region: string | null
           states_present: string[] | null
           updated_at: string
           verified: boolean | null
@@ -264,6 +265,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           primary_focus: string
+          region?: string | null
           states_present?: string[] | null
           updated_at?: string
           verified?: boolean | null
@@ -281,6 +283,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           primary_focus?: string
+          region?: string | null
           states_present?: string[] | null
           updated_at?: string
           verified?: boolean | null

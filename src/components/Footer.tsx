@@ -1,114 +1,99 @@
 import { Link } from "react-router-dom";
-import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 import AvsarLogo from "@/components/AvsarLogo";
-import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS, SOCIAL_LINKS } from "@/lib/constants";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS } from "@/lib/constants";
 
 const Footer = () => {
   return (
-    <footer className="bg-secondary border-t">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-secondary/50 border-t">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand Section */}
-          <div className="space-y-4">
-            <Link to="/" className="flex items-center space-x-2">
-              <AvsarLogo size="sm" showText={false} className="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" />
-              <span className="font-heading font-bold text-xl">Avsar</span>
+          <div className="lg:col-span-1">
+            <Link to="/" className="flex items-center gap-3 mb-4">
+              <AvsarLogo size="sm" showText={false} className="opacity-80 hover:opacity-100 transition-opacity" />
+              <div>
+                <span className="font-heading font-bold text-lg text-foreground">AVSAR</span>
+                <span className="block text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">Career Atlas</span>
+              </div>
             </Link>
-            <p className="text-muted-foreground text-sm">
-              AI-powered career and education guidance platform helping students make informed decisions.
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              AI-powered career and education guidance for Indian students. Find your path with confidence.
             </p>
-            <div className="flex space-x-4">
-              <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
-                <Facebook size={20} />
-              </a>
-              <a href={SOCIAL_LINKS.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter">
-                <Twitter size={20} />
-              </a>
-              <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="LinkedIn">
-                <Linkedin size={20} />
-              </a>
-              <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
-                <Instagram size={20} />
-              </a>
-            </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Explore */}
           <div>
-            <h3 className="font-heading font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="text-muted-foreground hover:text-primary transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/features" className="text-muted-foreground hover:text-primary transition-colors">
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-muted-foreground hover:text-primary transition-colors">
-                  Contact
-                </Link>
-              </li>
+            <h3 className="font-heading font-semibold text-sm uppercase tracking-wider text-foreground mb-4">Explore</h3>
+            <ul className="space-y-2.5">
+              {[
+                { to: "/careers", label: "Careers" },
+                { to: "/colleges", label: "Colleges" },
+                { to: "/scholarships", label: "Scholarships" },
+                { to: "/ngos", label: "NGO Network" },
+                { to: "/quiz", label: "Aptitude Quiz" },
+              ].map(link => (
+                <li key={link.to}>
+                  <Link to={link.to} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Resources */}
+          {/* Company */}
           <div>
-            <h3 className="font-heading font-semibold mb-4">Resources</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/help" className="text-muted-foreground hover:text-primary transition-colors">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link to="/ngos" className="text-muted-foreground hover:text-primary transition-colors">
-                  Educational NGOs
-                </Link>
-              </li>
-              <li>
-                <Link to="/admin/login" className="text-muted-foreground hover:text-primary transition-colors">
-                  Admin Login
-                </Link>
-              </li>
+            <h3 className="font-heading font-semibold text-sm uppercase tracking-wider text-foreground mb-4">Company</h3>
+            <ul className="space-y-2.5">
+              {[
+                { to: "/about", label: "About Us" },
+                { to: "/features", label: "Features" },
+                { to: "/contact", label: "Contact" },
+                { to: "/help", label: "Help Center" },
+                { to: "/privacy", label: "Privacy Policy" },
+                { to: "/terms", label: "Terms of Service" },
+              ].map(link => (
+                <li key={link.to}>
+                  <Link to={link.to} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Contact */}
           <div>
-            <h3 className="font-heading font-semibold mb-4">Contact</h3>
-            <ul className="space-y-2 text-muted-foreground text-sm">
-              <li>
-                Email: <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-primary transition-colors">{CONTACT_EMAIL}</a>
+            <h3 className="font-heading font-semibold text-sm uppercase tracking-wider text-foreground mb-4">Contact</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-primary transition-colors break-all">
+                  {CONTACT_EMAIL}
+                </a>
               </li>
-              <li>
-                Phone: <a href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`} className="hover:text-primary transition-colors">{CONTACT_PHONE}</a>
+              <li className="flex items-start gap-2">
+                <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <a href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`} className="hover:text-primary transition-colors">
+                  {CONTACT_PHONE}
+                </a>
               </li>
-              <li>Address: {CONTACT_ADDRESS}</li>
+              <li className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{CONTACT_ADDRESS}</span>
+              </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t text-center text-muted-foreground text-sm">
-          <p>&copy; {new Date().getFullYear()} Avsar. All rights reserved.</p>
+        <div className="mt-12 pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            &copy; {new Date().getFullYear()} AVSAR. All rights reserved.
+          </p>
+          <Link to="/admin/login" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+            Admin
+          </Link>
         </div>
       </div>
     </footer>
