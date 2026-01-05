@@ -7,12 +7,15 @@ import SEOHead from "@/components/SEOHead";
 import { 
   Brain, 
   GraduationCap, 
-  Search, 
   TrendingUp, 
   Award,
-  CheckCircle,
+  ArrowRight,
+  Sparkles,
+  MapPin,
   Users,
-  Star
+  BookOpen,
+  Target,
+  ChevronRight
 } from "lucide-react";
 import avsarLogo from "@/assets/avsar-logo.png";
 
@@ -27,259 +30,281 @@ const Landing = () => {
       />
       <Navigation />
       
-      {/* Hero Section */}
-      <section className="relative py-20 md:py-32 bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            {/* Hero Logo */}
-            <div className="flex justify-center mb-6">
-              <img 
-                src={avsarLogo} 
-                alt="AVSAR - Career & Education Advisor" 
-                className="w-32 h-32 md:w-40 md:h-40 object-contain animate-fade-in"
-                loading="eager"
-              />
+      {/* Hero Section - Editorial & Distinctive */}
+      <section className="relative min-h-[90vh] flex items-center bg-mesh-primary overflow-hidden">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-30" />
+        
+        {/* Floating accent shapes */}
+        <div className="absolute top-20 right-[15%] w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-20 left-[10%] w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-5xl mx-auto">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8 animate-fade-up">
+              <Sparkles className="h-4 w-4" />
+              <span>AI-Powered Career Discovery</span>
             </div>
-            <h1 className="font-heading font-bold text-4xl md:text-6xl leading-tight">
-              Discover Your Perfect
-              <span className="text-primary"> Career Path </span>
-              with AI
+
+            {/* Hero Headline - Oversized, Editorial */}
+            <h1 className="font-heading text-display-sm md:text-display leading-none mb-6 animate-fade-up stagger-1">
+              <span className="text-foreground">Navigate Your</span>
+              <br />
+              <span className="text-primary">Future</span>
+              <span className="text-accent">.</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Get personalized career recommendations, find the right colleges, and discover scholarship opportunities—all powered by artificial intelligence.
+
+            <p className="text-body-lg text-muted-foreground max-w-2xl mb-10 animate-fade-up stagger-2">
+              Personalized career guidance powered by AI. Discover the right path through aptitude assessment, 
+              college recommendations, and scholarship matching—designed for Indian students.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="text-lg">
-                <Link to="/register">Get Started Free</Link>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-16 animate-fade-up stagger-3">
+              <Button size="lg" asChild className="text-base px-8 h-12 bg-primary hover:bg-primary/90 shadow-glow">
+                <Link to="/register">
+                  Start Your Journey
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="text-lg">
-                <Link to="/about">Learn More</Link>
+              <Button size="lg" variant="outline" asChild className="text-base px-8 h-12">
+                <Link to="/about">
+                  Learn More
+                </Link>
               </Button>
             </div>
-            <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground pt-8">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="text-accent" size={20} />
-                <span>No credit card required</span>
+
+            {/* Stats Row */}
+            <div className="flex flex-wrap gap-12 animate-fade-up stagger-4">
+              <div>
+                <p className="font-mono text-3xl font-semibold text-foreground">10K+</p>
+                <p className="text-sm text-muted-foreground">Colleges Listed</p>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="text-accent" size={20} />
-                <span>Free aptitude quiz</span>
+              <div>
+                <p className="font-mono text-3xl font-semibold text-foreground">500+</p>
+                <p className="text-sm text-muted-foreground">Scholarships</p>
+              </div>
+              <div>
+                <p className="font-mono text-3xl font-semibold text-foreground">50+</p>
+                <p className="text-sm text-muted-foreground">Career Paths</p>
+              </div>
+              <div>
+                <p className="font-mono text-3xl font-semibold text-foreground">12+</p>
+                <p className="text-sm text-muted-foreground">NGO Partners</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-background">
+      {/* Features Section - Asymmetric Layout */}
+      <section className="py-24 md:py-32 bg-background">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="font-heading font-bold text-3xl md:text-5xl mb-4">
-              Why Choose Avsar?
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to make informed decisions about your future
-            </p>
-          </div>
+          <div className="max-w-6xl mx-auto">
+            {/* Section Header - Left aligned, editorial */}
+            <div className="mb-16">
+              <p className="text-sm font-medium text-accent uppercase tracking-widest mb-4">
+                What We Offer
+              </p>
+              <h2 className="font-heading text-title md:text-display-sm text-foreground max-w-xl">
+                Your complete career guidance toolkit
+              </h2>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardContent className="pt-6 space-y-4 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Brain className="text-primary" size={32} />
-                </div>
-                <h3 className="font-heading font-semibold text-xl">AI-Powered Quiz</h3>
-                <p className="text-muted-foreground">
-                  Take our comprehensive aptitude assessment and receive personalized career recommendations.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Feature Grid - Asymmetric */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Large Feature Card */}
+              <Card className="lg:col-span-2 lg:row-span-2 group overflow-hidden border-2 border-transparent hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="p-8 md:p-12 h-full flex flex-col">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Brain className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="font-heading text-subtitle text-foreground mb-4">
+                    AI-Powered Aptitude Assessment
+                  </h3>
+                  <p className="text-muted-foreground mb-6 flex-grow">
+                    Take our comprehensive quiz designed to understand your strengths, interests, and learning style. 
+                    Our AI analyzes your responses to generate personalized career recommendations with confidence scores.
+                  </p>
+                  <Link 
+                    to="/quiz" 
+                    className="inline-flex items-center text-primary font-medium hover:underline"
+                  >
+                    Take the Quiz
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </CardContent>
+              </Card>
 
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardContent className="pt-6 space-y-4 text-center">
-                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto">
-                  <TrendingUp className="text-accent" size={32} />
-                </div>
-                <h3 className="font-heading font-semibold text-xl">Career Guidance</h3>
-                <p className="text-muted-foreground">
-                  Explore detailed career paths with requirements, growth potential, and salary insights.
-                </p>
-              </CardContent>
-            </Card>
+              {/* Smaller Cards */}
+              <Card className="group border-2 border-transparent hover:border-accent/30 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <GraduationCap className="h-6 w-6 text-accent" />
+                  </div>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                    College Finder
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Search 10,000+ Indian colleges by state, district, course, and fees. Find your perfect fit.
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardContent className="pt-6 space-y-4 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <GraduationCap className="text-primary" size={32} />
-                </div>
-                <h3 className="font-heading font-semibold text-xl">College Finder</h3>
-                <p className="text-muted-foreground">
-                  Discover colleges that match your career goals with detailed information and comparisons.
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="group border-2 border-transparent hover:border-primary/30 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Award className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                    Scholarship Match
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Discover scholarships matched to your eligibility with deadline tracking and application links.
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardContent className="pt-6 space-y-4 text-center">
-                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto">
-                  <Award className="text-accent" size={32} />
-                </div>
-                <h3 className="font-heading font-semibold text-xl">Scholarships</h3>
-                <p className="text-muted-foreground">
-                  Access thousands of scholarship opportunities with eligibility tracking and deadlines.
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="group border-2 border-transparent hover:border-success/30 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="h-6 w-6 text-success" />
+                  </div>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                    Career Explorer
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Explore 50+ career paths with detailed information on requirements, growth, and salary ranges.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="group border-2 border-transparent hover:border-accent/30 transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Users className="h-6 w-6 text-accent" />
+                  </div>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                    NGO Support Network
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect with educational NGOs working across India for mentorship and resources.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-20 bg-secondary">
+      {/* How It Works - Clean, numbered steps */}
+      <section className="py-24 md:py-32 bg-mesh-accent">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="font-heading font-bold text-3xl md:text-5xl mb-4">
-              How It Works
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Your journey to the perfect career in three simple steps
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
-                1
-              </div>
-              <h3 className="font-heading font-semibold text-xl">Take the Quiz</h3>
-              <p className="text-muted-foreground">
-                Complete our comprehensive aptitude assessment to understand your strengths and interests.
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <p className="text-sm font-medium text-accent uppercase tracking-widest mb-4">
+                Getting Started
               </p>
+              <h2 className="font-heading text-title md:text-display-sm text-foreground">
+                Three steps to clarity
+              </h2>
             </div>
 
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 bg-accent text-accent-foreground rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
-                2
-              </div>
-              <h3 className="font-heading font-semibold text-xl">Get Recommendations</h3>
-              <p className="text-muted-foreground">
-                Receive AI-powered career suggestions tailored to your unique profile and goals.
-              </p>
+            <div className="grid md:grid-cols-3 gap-8 md:gap-12">
+              {[
+                {
+                  step: "01",
+                  title: "Complete Your Profile",
+                  description: "Tell us about your education, interests, and goals. This helps our AI understand you better.",
+                  icon: Target
+                },
+                {
+                  step: "02", 
+                  title: "Take the Aptitude Quiz",
+                  description: "Answer questions that assess your logical, analytical, creative, and technical abilities.",
+                  icon: BookOpen
+                },
+                {
+                  step: "03",
+                  title: "Get Your Roadmap",
+                  description: "Receive personalized career recommendations, college matches, and scholarship opportunities.",
+                  icon: MapPin
+                }
+              ].map((item, index) => (
+                <div key={index} className="relative group">
+                  {/* Connector line */}
+                  {index < 2 && (
+                    <div className="hidden md:block absolute top-8 left-full w-full h-[2px] bg-border" />
+                  )}
+                  
+                  <div className="relative">
+                    <span className="font-mono text-6xl font-bold text-muted/30 select-none">
+                      {item.step}
+                    </span>
+                    <div className="absolute top-6 left-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <item.icon className="h-6 w-6 text-primary" />
+                    </div>
+                  </div>
+                  <h3 className="font-heading text-xl font-semibold text-foreground mt-6 mb-3">
+                    {item.title}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
             </div>
 
-            <div className="text-center space-y-4">
-              <div className="w-20 h-20 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
-                3
-              </div>
-              <h3 className="font-heading font-semibold text-xl">Explore & Apply</h3>
-              <p className="text-muted-foreground">
-                Discover colleges and scholarships that align with your chosen career path.
-              </p>
+            <div className="text-center mt-16">
+              <Button size="lg" asChild className="h-12 px-8">
+                <Link to="/register">
+                  Start Now — It's Free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-          </div>
-
-          <div className="text-center mt-12">
-            <Button size="lg" asChild>
-              <Link to="/register">Start Your Journey</Link>
-            </Button>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 bg-background">
+      {/* Trust Section - Minimal */}
+      <section className="py-20 border-t border-border">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="font-heading font-bold text-3xl md:text-5xl mb-4">
-              Success Stories
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Hear from students who found their path with Avsar
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-sm text-muted-foreground uppercase tracking-widest mb-8">
+              Trusted by students across India
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="text-accent fill-accent" size={20} />
-                  ))}
-                </div>
-                <p className="text-muted-foreground">
-                  "Avsar helped me discover my passion for data science. The career recommendations were spot-on, and I found the perfect college program!"
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Users className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Sarah Johnson</p>
-                    <p className="text-sm text-muted-foreground">Computer Science Student</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="text-accent fill-accent" size={20} />
-                  ))}
-                </div>
-                <p className="text-muted-foreground">
-                  "The scholarship finder saved me thousands of dollars. I never knew there were so many opportunities available for students like me."
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
-                    <Users className="text-accent" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Michael Chen</p>
-                    <p className="text-sm text-muted-foreground">Engineering Major</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="text-accent fill-accent" size={20} />
-                  ))}
-                </div>
-                <p className="text-muted-foreground">
-                  "As a career changer, I was lost. Avsar's AI-powered guidance gave me clarity and confidence in choosing my new path."
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Users className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Emily Rodriguez</p>
-                    <p className="text-sm text-muted-foreground">Healthcare Professional</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60">
+              {/* Placeholder for trust badges or partner logos */}
+              <span className="font-heading text-lg text-muted-foreground">Government Scholarships</span>
+              <span className="font-heading text-lg text-muted-foreground">Private Universities</span>
+              <span className="font-heading text-lg text-muted-foreground">NGO Partners</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-primary to-primary/80">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <h2 className="font-heading font-bold text-3xl md:text-5xl text-primary-foreground">
-              Ready to Discover Your Future?
+      {/* CTA Section - Bold, Simple */}
+      <section className="py-24 md:py-32 bg-primary text-primary-foreground">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="font-heading text-title md:text-display-sm mb-6">
+              Your future starts with the right guidance
             </h2>
-            <p className="text-lg text-primary-foreground/90">
-              Join thousands of students making informed career decisions with AI-powered guidance
+            <p className="text-lg text-primary-foreground/80 mb-10">
+              Join thousands of students who found clarity in their career journey with AVSAR.
             </p>
-            <Button size="lg" variant="secondary" asChild className="text-lg">
-              <Link to="/register">Get Started Free</Link>
+            <Button 
+              size="lg" 
+              variant="secondary" 
+              asChild 
+              className="h-12 px-8 text-base shadow-lg"
+            >
+              <Link to="/register">
+                Get Started Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </div>

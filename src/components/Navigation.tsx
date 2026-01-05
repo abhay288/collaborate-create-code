@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Menu, X, User, LogOut, ChevronDown, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/NotificationBell";
 import avsarLogo from "@/assets/avsar-logo.png";
+import { cn } from "@/lib/utils";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
@@ -19,71 +21,101 @@ const Navigation = () => {
     navigate("/");
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/careers", label: "Careers" },
+    { href: "/colleges", label: "Colleges" },
+    { href: "/scholarships", label: "Scholarships" },
+    { href: "/ngos", label: "NGOs" },
+  ];
+
   return (
-    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b shadow-sm">
+    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group">
+          <Link to="/" className="flex items-center gap-3 group">
             <img 
               src={avsarLogo} 
-              alt="AVSAR Logo" 
-              className="w-10 h-10 md:w-12 md:h-12 object-contain group-hover:scale-110 transition-transform"
+              alt="AVSAR" 
+              className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
               loading="lazy"
             />
-            <span className="font-heading font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hidden sm:inline">
-              AVSAR
-            </span>
+            <div className="hidden sm:block">
+              <span className="font-heading font-bold text-xl text-foreground tracking-tight">
+                AVSAR
+              </span>
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground -mt-1">
+                Career Atlas
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link to="/dashboard" className="relative text-foreground hover:text-primary transition-all group">
-              <span>Dashboard</span>
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
-            </Link>
-            <Link to="/careers" className="relative text-foreground hover:text-primary transition-all group">
-              <span>Careers</span>
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
-            </Link>
-            <Link to="/colleges" className="relative text-foreground hover:text-primary transition-all group">
-              <span>Colleges</span>
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
-            </Link>
-            <Link to="/scholarships" className="relative text-foreground hover:text-primary transition-all group">
-              <span>Scholarships</span>
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300"></span>
-            </Link>
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                  isActive(link.href)
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
           {/* Auth Buttons - Desktop */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
                 <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <User className="h-5 w-5" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="gap-2 font-medium"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer">Profile</Link>
+                      <Link to="/profile" className="cursor-pointer flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Profile
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                    <DropdownMenuItem asChild>
+                      <Link to="/my-result" className="cursor-pointer flex items-center gap-2">
+                        <Heart className="h-4 w-4" />
+                        My Results
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
-                      Logout
+                      Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
             ) : (
               <>
-                <Button variant="ghost" asChild>
-                  <Link to="/login">Login</Link>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login">Sign In</Link>
                 </Button>
-                <Button asChild>
+                <Button size="sm" asChild className="bg-primary hover:bg-primary/90">
                   <Link to="/register">Get Started</Link>
                 </Button>
               </>
@@ -93,60 +125,58 @@ const Navigation = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMenu}
-            className="md:hidden p-2 rounded-md hover:bg-accent"
+            className="md:hidden p-2 rounded-md hover:bg-muted transition-colors"
             aria-label="Toggle menu"
           >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
+            {isOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden py-4 space-y-4 animate-fade-in">
-            <Link
-              to="/dashboard"
-              className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
-              onClick={toggleMenu}
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/careers"
-              className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
-              onClick={toggleMenu}
-            >
-              Careers
-            </Link>
-            <Link
-              to="/colleges"
-              className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
-              onClick={toggleMenu}
-            >
-              Colleges
-            </Link>
-            <Link
-              to="/scholarships"
-              className="block px-4 py-2 hover:bg-accent rounded-md transition-colors"
-              onClick={toggleMenu}
-            >
-              Scholarships
-            </Link>
-            <div className="flex flex-col space-y-2 px-4 pt-4 border-t">
+          <div className="md:hidden py-4 border-t border-border/50 animate-fade-in">
+            <div className="space-y-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={cn(
+                    "block px-4 py-2.5 rounded-md transition-colors",
+                    isActive(link.href)
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                  onClick={toggleMenu}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-border/50 space-y-2 px-4">
               {user ? (
                 <>
-                  <Button variant="outline" asChild onClick={toggleMenu}>
-                    <Link to="/profile">Profile</Link>
+                  <Button variant="outline" className="w-full justify-start" asChild onClick={toggleMenu}>
+                    <Link to="/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
                   </Button>
-                  <Button variant="destructive" onClick={() => { handleSignOut(); toggleMenu(); }}>
-                    Logout
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" 
+                    onClick={() => { handleSignOut(); toggleMenu(); }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" asChild onClick={toggleMenu}>
-                    <Link to="/login">Login</Link>
+                  <Button variant="outline" className="w-full" asChild onClick={toggleMenu}>
+                    <Link to="/login">Sign In</Link>
                   </Button>
-                  <Button asChild onClick={toggleMenu}>
+                  <Button className="w-full" asChild onClick={toggleMenu}>
                     <Link to="/register">Get Started</Link>
                   </Button>
                 </>
