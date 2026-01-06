@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import { formatDistanceToNow } from 'date-fns';
+import {
   BookOpen, 
   TrendingUp, 
   Award, 
@@ -184,8 +185,21 @@ const Dashboard = () => {
     { label: "Applications", value: "0", icon: TrendingUp, color: "text-primary" }
   ];
 
+  // Calculate account created time from user metadata or profile
+  const accountCreatedTime = useMemo(() => {
+    const createdAt = user?.created_at || profile?.created_at;
+    if (createdAt) {
+      try {
+        return formatDistanceToNow(new Date(createdAt), { addSuffix: true });
+      } catch {
+        return 'Recently';
+      }
+    }
+    return 'Recently';
+  }, [user?.created_at, profile?.created_at]);
+
   const recentActivity = [
-    { action: "Account created", time: "Just now", status: "completed" }
+    { action: "Account created", time: accountCreatedTime, status: "completed" }
   ];
 
   const nextSteps = needsOnboarding ? [

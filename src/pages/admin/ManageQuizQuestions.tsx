@@ -38,6 +38,7 @@ export default function ManageQuizQuestions() {
     target_class_levels: string[];
     target_study_areas: string[];
     options: { text: string; points: number }[];
+    correctOptionIndex: number;
   }>({
     question_text: "",
     category: "logical_reasoning",
@@ -49,7 +50,8 @@ export default function ManageQuizQuestions() {
       { text: "", points: 2 },
       { text: "", points: 3 },
       { text: "", points: 4 }
-    ]
+    ],
+    correctOptionIndex: 3 // Default to highest point option
   });
 
   useEffect(() => {
@@ -82,13 +84,20 @@ export default function ManageQuizQuestions() {
     }
 
     try {
+      // Mark correct answer with highest points
+      const optionsWithCorrect = formData.options.map((opt, idx) => ({
+        ...opt,
+        isCorrect: idx === formData.correctOptionIndex,
+        points: idx === formData.correctOptionIndex ? 5 : opt.points
+      }));
+
       const questionData = {
         question_text: formData.question_text,
         category: formData.category,
         points: formData.points,
         target_class_levels: formData.target_class_levels,
         target_study_areas: formData.target_study_areas,
-        options: formData.options
+        options: optionsWithCorrect
       };
 
       if (editingId) {
@@ -118,13 +127,22 @@ export default function ManageQuizQuestions() {
 
   const handleEdit = (question: QuizQuestion) => {
     setEditingId(question.id);
+    const options = Array.isArray(question.options) ? question.options : [];
+    const correctIndex = options.findIndex((opt: any) => opt.isCorrect === true);
+    
     setFormData({
       question_text: question.question_text,
       category: question.category as any,
       points: question.points || 1,
       target_class_levels: question.target_class_levels || ['All'],
       target_study_areas: question.target_study_areas || ['All'],
-      options: Array.isArray(question.options) ? question.options : []
+      options: options.length > 0 ? options : [
+        { text: "", points: 1 },
+        { text: "", points: 2 },
+        { text: "", points: 3 },
+        { text: "", points: 4 }
+      ],
+      correctOptionIndex: correctIndex >= 0 ? correctIndex : 3
     });
   };
 
@@ -159,7 +177,8 @@ export default function ManageQuizQuestions() {
         { text: "", points: 2 },
         { text: "", points: 3 },
         { text: "", points: 4 }
-      ]
+      ],
+      correctOptionIndex: 3
     });
   };
 
@@ -284,16 +303,27 @@ export default function ManageQuizQuestions() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Answer Options (with points 1-5)</Label>
+              <div className="space-y-4">
+                <Label>Answer Options (select the correct answer)</Label>
                 {formData.options.map((option, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={index} className="flex gap-2 items-center">
+                    <div 
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${
+                        formData.correctOptionIndex === index 
+                          ? 'bg-green-500 border-green-500 text-white' 
+                          : 'border-muted-foreground/30 hover:border-primary'
+                      }`}
+                      onClick={() => setFormData({ ...formData, correctOptionIndex: index })}
+                      title={formData.correctOptionIndex === index ? 'Correct answer' : 'Click to mark as correct'}
+                    >
+                      {formData.correctOptionIndex === index ? '✓' : index + 1}
+                    </div>
                     <Input
                       placeholder={`Option ${index + 1}`}
                       value={option.text}
                       onChange={(e) => updateOption(index, 'text', e.target.value)}
                       required
-                      className="flex-1"
+                      className={`flex-1 ${formData.correctOptionIndex === index ? 'border-green-500 bg-green-500/5' : ''}`}
                     />
                     <Input
                       type="number"
@@ -307,6 +337,9 @@ export default function ManageQuizQuestions() {
                     />
                   </div>
                 ))}
+                <p className="text-xs text-muted-foreground">
+                  Click the circle to mark the correct answer. Correct answers automatically get 5 points.
+                </p>
               </div>
 
               <div className="flex gap-2">

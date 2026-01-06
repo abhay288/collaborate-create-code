@@ -15,7 +15,9 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowRight, ArrowLeft, School, Building2, GraduationCap, Target, BookOpen, Calendar, Settings } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowRight, ArrowLeft, School, Building2, GraduationCap, Target, BookOpen, Calendar, Settings, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import AvsarLogo from "@/components/AvsarLogo";
@@ -117,7 +119,7 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const totalSteps = 9;
+  const totalSteps = 10; // Added district step
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
 
@@ -129,6 +131,7 @@ const Onboarding = () => {
     targetAdmissionYear: "",
     preferences: [] as string[],
     preferredState: "",
+    preferredDistrict: "",
   });
 
   useEffect(() => {
@@ -185,6 +188,16 @@ const Onboarding = () => {
     }
     if (step === 7 && !formData.targetAdmissionYear) {
       toast.error("Please select your target admission year");
+      return;
+    }
+    // Make state mandatory (step 9)
+    if (step === 9 && !formData.preferredState) {
+      toast.error("Please select your state - this is required for accurate recommendations");
+      return;
+    }
+    // Make district mandatory (step 10)
+    if (step === 10 && !formData.preferredDistrict) {
+      toast.error("Please enter your district - this helps us find nearby colleges");
       return;
     }
 
@@ -249,9 +262,11 @@ const Onboarding = () => {
         target_admission_year: parseInt(formData.targetAdmissionYear),
         preferences: formData.preferences,
         preferred_state: formData.preferredState,
+        preferred_district: formData.preferredDistrict,
         class_level: classLevelMapping[formData.currentStudyLevel] || "UG",
         study_area: getStudyArea(formData.currentCourse),
         interests: formData.targetCourseInterest,
+        is_onboarding_complete: true,
       };
 
       console.log("Saving onboarding data:", updateData);
@@ -533,29 +548,58 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 9: Location Preference */}
+          {/* Step 9: State Selection (MANDATORY) */}
           {step === 9 && (
             <div className="space-y-6 animate-fade-up">
               <div className="text-center">
-                <h3 className="text-2xl font-bold mb-2">Almost done! 🎉</h3>
-                <p className="text-muted-foreground">Where would you prefer to study?</p>
+                <h3 className="text-2xl font-bold mb-2">Where are you located? 📍</h3>
+                <p className="text-muted-foreground">Select your state to find nearby colleges and scholarships</p>
+                <Badge variant="outline" className="mt-2 text-destructive border-destructive">Required</Badge>
               </div>
 
               <Select
                 value={formData.preferredState}
-                onValueChange={(value) => setFormData({ ...formData, preferredState: value })}
+                onValueChange={(value) => setFormData({ ...formData, preferredState: value, preferredDistrict: "" })}
               >
                 <SelectTrigger className="h-14 text-lg">
-                  <SelectValue placeholder="Select preferred state" />
+                  <SelectValue placeholder="Select your state *" />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
-                  {INDIAN_STATES.map((state) => (
+                  {INDIAN_STATES.filter(s => s !== "Any State").map((state) => (
                     <SelectItem key={state} value={state}>
                       {state}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
+              <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                <p className="text-sm text-muted-foreground">
+                  📌 Your state helps us recommend nearby colleges and state-specific scholarships
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 10: District Selection (MANDATORY) */}
+          {step === 10 && (
+            <div className="space-y-6 animate-fade-up">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold mb-2">Almost done! 🎉</h3>
+                <p className="text-muted-foreground">Enter your district for hyper-local recommendations</p>
+                <Badge variant="outline" className="mt-2 text-destructive border-destructive">Required</Badge>
+              </div>
+
+              <div>
+                <Label htmlFor="district" className="text-lg font-medium">Your District *</Label>
+                <Input
+                  id="district"
+                  value={formData.preferredDistrict}
+                  onChange={(e) => setFormData({ ...formData, preferredDistrict: e.target.value })}
+                  placeholder="e.g., Lucknow, Mumbai, Chennai"
+                  className="h-14 text-lg mt-2"
+                />
+              </div>
 
               <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-4 rounded-xl">
                 <h4 className="font-semibold mb-2">Your Profile Summary:</h4>
@@ -565,6 +609,8 @@ const Onboarding = () => {
                   <li>📖 Course: {formData.currentCourse}</li>
                   <li>🎓 Interests: {formData.targetCourseInterest.slice(0, 3).join(', ')}{formData.targetCourseInterest.length > 3 && '...'}</li>
                   <li>📅 Admission Year: {formData.targetAdmissionYear}</li>
+                  <li>📍 State: {formData.preferredState}</li>
+                  <li>🏠 District: {formData.preferredDistrict || '(enter above)'}</li>
                 </ul>
               </div>
             </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/NotificationBell";
+import ThemeToggle from "@/components/ThemeToggle";
 import avsarLogo from "@/assets/avsar-logo.png";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,7 @@ const Navigation = () => {
 
           {/* Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             {user ? (
               <>
                 <NotificationBell />
@@ -154,6 +156,10 @@ const Navigation = () => {
             </div>
             
             <div className="mt-4 pt-4 border-t border-border/50 space-y-2 px-4">
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Theme</span>
+                <ThemeToggle />
+              </div>
               {user ? (
                 <>
                   <Button variant="outline" className="w-full justify-start" asChild onClick={toggleMenu}>
