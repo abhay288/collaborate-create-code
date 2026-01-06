@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Building2, 
   ExternalLink, 
@@ -15,7 +22,8 @@ import {
   Users,
   GraduationCap,
   CheckCircle2,
-  Globe
+  Globe,
+  Filter
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -131,33 +139,79 @@ const NGOs = () => {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Button
-              variant={selectedFocus === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedFocus(null)}
+          {/* Filter dropdowns */}
+          <div className="flex flex-wrap gap-4 justify-center items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Filters:</span>
+            </div>
+            
+            <Select
+              value={selectedFocus || "all"}
+              onValueChange={(value) => setSelectedFocus(value === "all" ? null : value)}
             >
-              All Focus Areas
-            </Button>
-            {focusAreas.map(focus => (
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Focus Areas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Focus Areas</SelectItem>
+                {focusAreas.map(focus => (
+                  <SelectItem key={focus} value={focus}>
+                    {focus}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={selectedState || "all"}
+              onValueChange={(value) => setSelectedState(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All States" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All States</SelectItem>
+                {allStates.map(state => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {(selectedFocus || selectedState) && (
               <Button
-                key={focus}
-                variant={selectedFocus === focus ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
-                onClick={() => setSelectedFocus(selectedFocus === focus ? null : focus)}
+                onClick={() => {
+                  setSelectedFocus(null);
+                  setSelectedState(null);
+                }}
+                className="text-destructive hover:text-destructive"
               >
-                {focus}
+                Clear Filters
               </Button>
-            ))}
+            )}
           </div>
 
-          {selectedState && (
-            <div className="text-center">
-              <Badge variant="secondary" className="gap-2">
-                <MapPin className="h-3 w-3" />
-                {selectedState}
-                <button onClick={() => setSelectedState(null)} className="ml-1 hover:text-destructive">×</button>
-              </Badge>
+          {/* Active filters display */}
+          {(selectedFocus || selectedState) && (
+            <div className="flex flex-wrap gap-2 justify-center">
+              {selectedFocus && (
+                <Badge variant="secondary" className="gap-2">
+                  <GraduationCap className="h-3 w-3" />
+                  {selectedFocus}
+                  <button onClick={() => setSelectedFocus(null)} className="ml-1 hover:text-destructive">×</button>
+                </Badge>
+              )}
+              {selectedState && (
+                <Badge variant="secondary" className="gap-2">
+                  <MapPin className="h-3 w-3" />
+                  {selectedState}
+                  <button onClick={() => setSelectedState(null)} className="ml-1 hover:text-destructive">×</button>
+                </Badge>
+              )}
             </div>
           )}
         </div>

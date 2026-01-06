@@ -19,6 +19,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useStreamBasedRecommendations } from "@/hooks/useStreamBasedRecommendations";
 import AvsarVerifiedBadge from "@/components/AvsarVerifiedBadge";
+import WhyRecommended from "@/components/WhyRecommended";
 
 const RecommendedColleges = () => {
   const { 
@@ -283,10 +284,21 @@ const RecommendedColleges = () => {
                           </div>
                         )}
                         
-                        {/* Match Reason */}
-                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                          {college.match_reason}
-                        </p>
+                        {/* Why Recommended - Explainability Badge */}
+                        {college.explanations && college.explanations.length > 0 ? (
+                          <div className="pt-2 border-t border-border/50">
+                            <WhyRecommended 
+                              explanations={college.explanations}
+                              confidenceBand={college.confidence_band}
+                              confidenceScore={college.confidence_score}
+                              variant="button"
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                            {college.match_reason}
+                          </p>
+                        )}
 
                         {/* Action Buttons */}
                         <div className="pt-2 flex gap-2">
