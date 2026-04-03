@@ -20,6 +20,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         return;
       }
 
+      // Fast-path: if onboarding was just completed this session, skip DB check
+      if (sessionStorage.getItem('onboarding_just_completed') === 'true') {
+        setIsOnboardingComplete(true);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const { data: profile } = await supabase
           .from('profiles')

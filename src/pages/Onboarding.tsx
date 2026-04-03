@@ -208,6 +208,7 @@ const Onboarding = () => {
       if (error) throw error;
 
       toast.success("Profile setup complete!");
+      sessionStorage.setItem('onboarding_just_completed', 'true');
       setShowQuizPrompt(true);
     } catch (error) {
       console.error('Error saving profile:', error);
