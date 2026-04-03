@@ -46,7 +46,7 @@ Focus on realistic interview questions that would be asked in India.`;
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: `${CAREER_TOOL_SYSTEM_PROMPT(language)}\n\nYou are an expert interview coach. Return only valid JSON arrays. Ensure questions are valid and career-related.\n\n**STRICT LANGUAGE COMPLIANCE**: Your questions MUST be entirely in ${language === 'hi' ? 'Hindi (हिन्दी)' : 'English'}.` },
             { role: "user", content: prompt }
@@ -143,7 +143,7 @@ Give specific, actionable feedback in 2-3 sentences.`;
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: `${CAREER_TOOL_SYSTEM_PROMPT(language)}\n\nYou are an expert interview evaluator for Indian job market. Apply classification rules: if the answer is offensive or irrelevant, provide appropriate redirected feedback.\n\n**STRICT LANGUAGE COMPLIANCE**: Your feedback MUST be entirely in ${language === 'hi' ? 'Hindi (हिन्दी)' : 'English'}.` },
             { role: "user", content: evalPrompt }
@@ -208,7 +208,7 @@ Provide: 3 strengths, 3 areas for improvement, and a 2-sentence summary.`;
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: `${CAREER_TOOL_SYSTEM_PROMPT(language)}\n\nYou are an expert career mentor. Provide a summary that is motivational 🚀 and future-focused.\n\n**STRICT LANGUAGE COMPLIANCE**: Your summary (strengths, improvements, summary) MUST be entirely in ${language === 'hi' ? 'Hindi (हिन्दी)' : 'English'}.` },
             { role: "user", content: summaryPrompt }

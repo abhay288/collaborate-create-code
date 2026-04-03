@@ -70,7 +70,7 @@ Based on the student's profile and the career requirements, identify what skills
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "You are a career skills analyst for Indian students." },
           { role: "user", content: prompt },
