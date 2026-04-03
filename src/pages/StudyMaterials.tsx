@@ -47,12 +47,12 @@ const RESOURCES: StudyResource[] = [
   { name: "Harvard Resume Guide", url: "https://careerservices.fas.harvard.edu/resources/resume-cover-letter-resources/", description: "Free resume writing guides from Harvard Career Services. Templates and best practices.", category: "resume_interview", source: "global", tags: ["Resume", "Harvard", "Templates"] },
 
   // 🎥 YouTube Channels — Government Exams
-  { name: "NPTEL Official", url: "https://www.youtube.com/@npabornepal", description: "Official IIT/IISc lecture series. Engineering, science, and management courses.", category: "youtube", source: "youtube", tags: ["IIT", "Engineering", "Govt Exams"] },
+  { name: "NPTEL Official", url: "https://www.youtube.com/@npabornepal_lectures", description: "Official IIT/IISc lecture series. Engineering, science, and management courses.", category: "youtube", source: "youtube", tags: ["IIT", "Engineering", "Govt Exams"] },
   { name: "Unacademy JEE", url: "https://www.youtube.com/@UnacademyJEE", description: "Free JEE preparation lectures from top educators.", category: "youtube", source: "youtube", tags: ["JEE", "Engineering", "Govt Exams"] },
   { name: "Unacademy NEET", url: "https://www.youtube.com/@UnacademyNEET", description: "Free NEET preparation — biology, chemistry, physics for medical aspirants.", category: "youtube", source: "youtube", tags: ["NEET", "Medical", "Govt Exams"] },
   { name: "Unacademy UPSC", url: "https://www.youtube.com/@UnacademyIAS", description: "Free UPSC Civil Services preparation from India's top IAS educators.", category: "youtube", source: "youtube", tags: ["UPSC", "IAS", "Govt Exams"] },
   { name: "StudyIQ IAS", url: "https://www.youtube.com/@StudyIQIAS", description: "Comprehensive UPSC, SSC, Banking exam preparation and current affairs.", category: "youtube", source: "youtube", tags: ["UPSC", "SSC", "Current Affairs"] },
-  { name: "Adda247", url: "https://www.youtube.com/@adabornepal247", description: "SSC, Banking, Railways, UPSC and State PCS exam preparation.", category: "youtube", source: "youtube", tags: ["SSC", "Banking", "Railways"] },
+  { name: "Adda247", url: "https://www.youtube.com/@Adda247", description: "SSC, Banking, Railways, UPSC and State PCS exam preparation.", category: "youtube", source: "youtube", tags: ["SSC", "Banking", "Railways"] },
   { name: "Wifistudy", url: "https://www.youtube.com/@wifistudy", description: "Free classes for SSC, Railway, Banking and all competitive exams.", category: "youtube", source: "youtube", tags: ["SSC", "Railway", "Competitive"] },
 
   // 🎥 YouTube — School & CBSE/NCERT
@@ -83,7 +83,7 @@ const RESOURCES: StudyResource[] = [
 
   // 🎥 YouTube — Career & Interview
   { name: "The Urban Fight", url: "https://www.youtube.com/@TheUrbanFight", description: "Interview preparation, resume tips, career guidance for Indian students.", category: "youtube", source: "youtube", tags: ["Interview", "Resume", "Career"] },
-  { name: "Ankur Warikoo", url: "https://www.youtube.com/@waabornepal", description: "Career advice, productivity, financial literacy, and entrepreneurship for Indian youth.", category: "youtube", source: "youtube", tags: ["Career", "Productivity", "Finance"] },
+  { name: "Ankur Warikoo", url: "https://www.youtube.com/@warikoo", description: "Career advice, productivity, financial literacy, and entrepreneurship for Indian youth.", category: "youtube", source: "youtube", tags: ["Career", "Productivity", "Finance"] },
 ];
 
 const CATEGORIES: { value: Category; label: string; icon: React.ElementType }[] = [

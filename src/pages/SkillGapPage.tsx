@@ -24,9 +24,35 @@ export default function SkillGapPage() {
   const [careerTitle, setCareerTitle] = useState("");
   const [result, setResult] = useState<SkillGapResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cachedTitle, setCachedTitle] = useState("");
+
+  // Inappropriate words blocklist
+  const BLOCKED_WORDS = [
+    'thief', 'chor', 'murderer', 'killer', 'terrorist', 'drug dealer',
+    'smuggler', 'prostitute', 'beggar', 'scammer', 'fraudster', 'hacker',
+    'assassin', 'robber', 'dacoit', 'gangster', 'pirate', 'kidnapper'
+  ];
+
+  const isInappropriate = (text: string) => {
+    const lower = text.toLowerCase().trim();
+    return BLOCKED_WORDS.some(word => lower.includes(word));
+  };
 
   const analyze = async () => {
     if (!careerTitle.trim()) { toast.error("Enter a career title"); return; }
+    
+    // Block inappropriate inputs
+    if (isInappropriate(careerTitle)) {
+      toast.error("Please enter a valid, professional career title.");
+      return;
+    }
+    
+    // If same title and we have cached result, reuse it
+    if (careerTitle.trim().toLowerCase() === cachedTitle.toLowerCase() && result) {
+      toast.info("Showing cached result. Change the career title to re-analyze.");
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-skill-gap", {
@@ -34,6 +60,7 @@ export default function SkillGapPage() {
       });
       if (error) throw error;
       setResult(data);
+      setCachedTitle(careerTitle.trim());
     } catch (e: any) {
       toast.error(e.message || "Analysis failed");
     } finally {

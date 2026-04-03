@@ -155,7 +155,15 @@ serve(async (req: Request) => {
             role: 'system',
             content: `${CAREER_TOOL_SYSTEM_PROMPT(language)}
 
-You are an expert career counselor AI specializing in the Indian Education System. Based on the student's aptitude test scores and profile, recommend exactly 5 suitable courses and careers.
+You are an expert career counselor AI specializing in the Indian Education System. Based on the student's aptitude test scores and profile, recommend exactly 5 suitable FUTURE courses and career paths.
+
+CRITICAL RULE — RECOMMEND FUTURE COURSES ONLY:
+- You MUST recommend courses the student should pursue AFTER their current education level.
+- NEVER recommend courses at their current level. Always recommend the NEXT STEP.
+- If student is in 10th class → Recommend 11th/12th stream choices (Science PCM, Science PCB, Commerce, Arts) and what they lead to.
+- If student is in 11th/12th → Recommend Undergraduate degrees (B.Tech, MBBS, B.Com, BA LLB, BCA, etc.)
+- If student is in UG → Recommend Postgraduate/Professional paths (M.Tech, MBA, GATE, CAT, UPSC, MS abroad, etc.)
+- If student is in PG → Recommend PhD, Professional certifications, or Direct career paths.
 
 CAREER MATCHING RULES:
 - Technical + Logical high → B.Tech/B.E. (CSE, IT, AI, Robotics)
@@ -165,8 +173,7 @@ CAREER MATCHING RULES:
 - Science stream + high technical → Engineering, Research, Biotechnology
 
 STRICT REALISM:
-- Map current Class Level (${classLevel}) to immediate next steps.
-- If student is in school, suggest Undergraduate courses. If in college, suggest Master tracks or Professional certifications.
+- Map current Class Level (${classLevel}) to the NEXT HIGHER education step.
 - Ensure 'guidance' points are highly personalized to their 'Study Area' (${studyArea}).
 
 **STRICT LANGUAGE COMPLIANCE**: Your response MUST be entirely in ${language === 'hi' ? 'Hindi (हिन्दी)' : 'English'}.

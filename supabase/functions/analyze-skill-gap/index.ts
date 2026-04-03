@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { CAREER_TOOL_SYSTEM_PROMPT } from "../_shared/career-logic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,7 +73,7 @@ Based on the student's profile and the career requirements, identify what skills
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are a career skills analyst for Indian students." },
+          { role: "system", content: `${CAREER_TOOL_SYSTEM_PROMPT('en')}\n\nYou are a career skills analyst for Indian students. If the career title is inappropriate, offensive, or not a real profession, do NOT use the tool — instead explain that the career is not valid.` },
           { role: "user", content: prompt },
         ],
         tools: [{

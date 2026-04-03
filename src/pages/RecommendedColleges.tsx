@@ -54,9 +54,12 @@ const RecommendedColleges = () => {
 
   const streamInfo = getStreamLabel();
   
-  // Helper to clean college name (remove leading IDs)
+  // Helper to clean college name (remove leading numeric IDs and UUIDs)
   const cleanCollegeName = (name: string) => {
-    return name.replace(/^\d+[\s\-+]+\s*/, '').trim();
+    return name
+      .replace(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\s*[-–]?\s*/i, '') // UUID prefix
+      .replace(/^\d+[\s\-+]+\s*/, '') // numeric prefix
+      .trim();
   };
 
   // Helper to sanitize URL
@@ -313,12 +316,17 @@ const RecommendedColleges = () => {
 
                         {/* Action Buttons */}
                         <div className="pt-2 flex gap-2">
-                          {college.website && (
+                          {college.website ? (
                             <Button asChild size="sm" variant="outline" className="flex-1">
                               <a href={sanitizeUrl(college.website)} target="_blank" rel="noopener noreferrer">
                                 <ExternalLink className="h-4 w-4 mr-1" />
-                                Website
+                                View Website
                               </a>
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline" className="flex-1" disabled>
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View Website
                             </Button>
                           )}
                           {college.admission_link && (

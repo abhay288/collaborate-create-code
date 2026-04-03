@@ -398,18 +398,47 @@ const Profile = () => {
                         className="hidden"
                         onChange={handleImageUpload}
                       />
-                      <Button 
-                        variant="outline" 
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Upload className="mr-2 h-4 w-4" />
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                        >
+                          {isUploading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                          )}
+                          {isUploading ? 'Uploading...' : 'Change Picture'}
+                        </Button>
+                        {profile.profile_picture_url && (
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={async () => {
+                              if (!user) return;
+                              try {
+                                const { error } = await supabase
+                                  .from('profiles')
+                                  .update({ 
+                                    profile_picture_url: null,
+                                    updated_at: new Date().toISOString()
+                                  })
+                                  .eq('id', user.id);
+                                if (error) throw error;
+                                setProfile(prev => ({ ...prev, profile_picture_url: '' }));
+                                toast.success('Profile picture removed');
+                              } catch (error) {
+                                console.error('Error removing picture:', error);
+                                toast.error('Failed to remove picture');
+                              }
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remove
+                          </Button>
                         )}
-                        {isUploading ? 'Uploading...' : 'Change Picture'}
-                      </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-1">JPG, PNG up to 5MB</p>
                     </div>
                   </div>

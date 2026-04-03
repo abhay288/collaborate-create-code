@@ -37,6 +37,7 @@ const TypingTestPage = () => {
   const [mode, setMode] = useState<Mode>("select");
   const [paragraph, setParagraph] = useState("");
   const [userInput, setUserInput] = useState("");
+  const [timerDuration, setTimerDuration] = useState(60);
   const [timeLeft, setTimeLeft] = useState(60);
   const [timerStarted, setTimerStarted] = useState(false);
   const [speedResult, setSpeedResult] = useState<SpeedResult | null>(null);
@@ -56,14 +57,14 @@ const TypingTestPage = () => {
     const p = SPEED_PARAGRAPHS[Math.floor(Math.random() * SPEED_PARAGRAPHS.length)];
     setParagraph(p);
     setUserInput("");
-    setTimeLeft(60);
+    setTimeLeft(timerDuration);
     setTimerStarted(false);
     setMode("speed");
     setLiveWpm(0);
     setLiveAccuracy(100);
     setLiveErrors(0);
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
+  }, [timerDuration]);
 
   // Timer effect - only runs when timerStarted is true
   useEffect(() => {
@@ -144,7 +145,7 @@ const TypingTestPage = () => {
     }
   };
 
-  const resetAll = () => { setMode("select"); setUserInput(""); setProText(""); setSpeedResult(null); setProResult(null); setLiveWpm(0); setLiveErrors(0); setLiveAccuracy(100); setTimerStarted(false); setTimeLeft(60); };
+  const resetAll = () => { setMode("select"); setUserInput(""); setProText(""); setSpeedResult(null); setProResult(null); setLiveWpm(0); setLiveErrors(0); setLiveAccuracy(100); setTimerStarted(false); setTimeLeft(timerDuration); };
 
   // Render highlighted text for speed mode
   const renderHighlightedText = () => {
@@ -184,31 +185,57 @@ const TypingTestPage = () => {
 
         {/* Mode Selection */}
         {mode === "select" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-            <Card className="border-teal-500/20 hover:border-teal-500/50 transition-all cursor-pointer group" onClick={startSpeedTest}>
-              <CardContent className="p-8 text-center">
-                <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Zap className="h-10 w-10 text-teal-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">⚡ Speed Mode</h3>
-                <p className="text-sm text-muted-foreground mb-4">60-second typing speed test with accuracy tracking</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline">WPM</Badge><Badge variant="outline">Accuracy</Badge><Badge variant="outline">60 sec</Badge>
+          <div className="space-y-6 animate-fade-in">
+            {/* Timer Duration Selector */}
+            <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Test Duration:</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {[30, 60, 90, 120].map(duration => (
+                      <Button
+                        key={duration}
+                        variant={timerDuration === duration ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setTimerDuration(duration)}
+                      >
+                        {duration}s
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-blue-500/20 hover:border-blue-500/50 transition-all cursor-pointer group" onClick={() => setMode("professional")}>
-              <CardContent className="p-8 text-center">
-                <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <FileText className="h-10 w-10 text-blue-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">📝 Professional Writing</h3>
-                <p className="text-sm text-muted-foreground mb-4">AI-evaluated writing quality, grammar & professional tone</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline">AI Analysis</Badge><Badge variant="outline">Grammar</Badge><Badge variant="outline">Rewrite</Badge>
-                </div>
-              </CardContent>
-            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-teal-500/20 hover:border-teal-500/50 transition-all cursor-pointer group" onClick={startSpeedTest}>
+                <CardContent className="p-8 text-center">
+                  <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Zap className="h-10 w-10 text-teal-500" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">⚡ Speed Mode</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{timerDuration}-second typing speed test with accuracy tracking</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Badge variant="outline">WPM</Badge><Badge variant="outline">Accuracy</Badge><Badge variant="outline">{timerDuration} sec</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-blue-500/20 hover:border-blue-500/50 transition-all cursor-pointer group" onClick={() => setMode("professional")}>
+                <CardContent className="p-8 text-center">
+                  <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <FileText className="h-10 w-10 text-blue-500" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">📝 Professional Writing</h3>
+                  <p className="text-sm text-muted-foreground mb-4">AI-evaluated writing quality, grammar & professional tone</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Badge variant="outline">AI Analysis</Badge><Badge variant="outline">Grammar</Badge><Badge variant="outline">Rewrite</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 

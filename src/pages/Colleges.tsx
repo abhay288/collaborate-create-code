@@ -394,7 +394,7 @@ function CollegeCard({
               <span className="text-muted-foreground text-xs">/year</span>
             </div>
           )}
-          {college?.courses_offered && college.courses_offered.length > 0 && (
+          {college?.courses_offered && college.courses_offered.length > 0 ? (
             <div className="flex items-center gap-2 text-sm">
               <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="text-muted-foreground line-clamp-1">
@@ -402,7 +402,14 @@ function CollegeCard({
                 {college.courses_offered.length > 2 && ` +${college.courses_offered.length - 2}`}
               </span>
             </div>
-          )}
+          ) : college?.specialised_in ? (
+            <div className="flex items-center gap-2 text-sm">
+              <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="text-muted-foreground line-clamp-1">
+                {college.specialised_in}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Actions */}
@@ -454,13 +461,19 @@ function CollegeCard({
                       <p className="text-xs text-muted-foreground">Annual Fees</p>
                     </div>
                   )}
-                  {college?.courses_offered && (
+                  {college?.courses_offered && college.courses_offered.length > 0 ? (
                     <div className="text-center p-4 rounded-lg bg-muted/50">
                       <BookOpen className="h-5 w-5 mx-auto mb-2 text-primary" />
                       <p className="font-mono text-xl font-semibold">{college.courses_offered.length}</p>
                       <p className="text-xs text-muted-foreground">Courses</p>
                     </div>
-                  )}
+                  ) : college?.specialised_in ? (
+                    <div className="text-center p-4 rounded-lg bg-muted/50">
+                      <BookOpen className="h-5 w-5 mx-auto mb-2 text-primary" />
+                      <p className="font-mono text-sm font-semibold">{college.specialised_in}</p>
+                      <p className="text-xs text-muted-foreground">Specialization</p>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Affiliation */}
