@@ -51,12 +51,6 @@ const TypingTestPage = () => {
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const currentInputRef = useRef("");
-
-  // Sync ref with current input to avoid stale closures in timer
-  useEffect(() => {
-    currentInputRef.current = userInput;
-  }, [userInput]);
 
   // Speed Mode - prepare but don't start timer
   const startSpeedTest = useCallback(() => {
@@ -76,13 +70,17 @@ const TypingTestPage = () => {
   useEffect(() => {
     if (!timerStarted || mode !== "speed") return;
     timerRef.current = setInterval(() => {
-      setTimeLeft(p => {
-        if (p <= 1) { finishSpeedTest(); return 0; }
-        return p - 1;
-      });
+      setTimeLeft(p => Math.max(0, p - 1));
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timerStarted, mode]);
+
+  // Handle test completion when timer reaches zero
+  useEffect(() => {
+    if (timeLeft === 0 && timerStarted && mode === "speed") {
+      finishSpeedTest();
+    }
+  }, [timeLeft, timerStarted, mode]);
 
   const handleSpeedInput = (value: string) => {
     if (timeLeft <= 0 && timerStarted) return;
@@ -116,7 +114,7 @@ const TypingTestPage = () => {
   const finishSpeedTest = (text?: string) => {
     setTimerStarted(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    const input = text !== undefined ? text : currentInputRef.current;
+    const input = text !== undefined ? text : userInput;
     const totalChars = input.length;
     let correctChars = 0;
     for (let i = 0; i < totalChars; i++) {
