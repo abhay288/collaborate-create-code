@@ -1,0 +1,46 @@
+project_id = "aanuxmipcjiqcmlqfdjk"
+
+[functions.generate-career-recommendations]
+verify_jwt = false
+
+[functions.generate-career-description]
+verify_jwt = false
+
+[functions.map-opportunities]
+verify_jwt = false
+
+[functions.train-recommendation-model]
+verify_jwt = false
+
+[functions.generate-quiz-questions]
+verify_jwt = false
+
+[functions.refresh-data]
+verify_jwt = false
+
+[functions.send-contact-email]
+verify_jwt = false
+
+[functions.fetch-government-opportunities]
+verify_jwt = false
+
+[functions.analyze-resume]
+verify_jwt = false
+
+[functions.scrape-opportunities]
+verify_jwt = false
+
+[functions.ai-mentor-chat]
+verify_jwt = false
+
+[functions.generate-career-roadmap]
+verify_jwt = false
+
+[functions.analyze-skill-gap]
+verify_jwt = false
+
+[functions.mock-interview]
+verify_jwt = false
+
+[functions.career-insights]
+verify_jwt = false

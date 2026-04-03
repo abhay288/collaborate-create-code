@@ -1,0 +1,816 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ChevronLeft, ChevronRight, Save, Clock, Loader2, Maximize2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { useQuizSession } from "@/hooks/useQuizSession";
+import { useCareerRecommendations } from "@/hooks/useCareerRecommendations";
+import { useQuizEligibility } from "@/hooks/useQuizEligibility";
+import { useFullScreenQuiz } from "@/hooks/useFullScreenQuiz";
+import { supabase } from "@/integrations/supabase/client";
+import AvsarLogo from "@/components/AvsarLogo";
+
+interface QuizQuestion {
+  id: string;
+  question_text: string;
+  category: string;
+  options: any;
+}
+
+// Local storage key for quiz answers backup
+const QUIZ_BACKUP_KEY = 'avsar_quiz_backup';
+
+export default function Quiz() {
+  const navigate = useNavigate();
+  const { startNewSession, saveResponse, completeSession, currentSession } = useQuizSession();
+  const { generateRecommendations } = useCareerRecommendations();
+  const { canTakeQuiz, reason: eligibilityReason, hasCompletedQuizThisYear, loading: eligibilityLoading } = useQuizEligibility();
+  const { isFullScreen, warningCount, isTerminated, terminationReason, enterFullScreen, exitFullScreen, isSupported: fullScreenSupported, resetTermination } = useFullScreenQuiz();
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [savedResponses, setSavedResponses] = useState<Array<{
+    question_id: string;
+    category: string;
+    selected_option: string;
+    points_earned: number;
+  }>>([]);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const progress = quizQuestions.length > 0 ? ((currentQuestion + 1) / quizQuestions.length) * 100 : 0;
+
+  // Load backup answers from localStorage on mount
+  useEffect(() => {
+    const backup = localStorage.getItem(QUIZ_BACKUP_KEY);
+    if (backup) {
+      try {
+        const { answers: savedAnswers, responses: savedResponses, sessionId: savedSessionId } = JSON.parse(backup);
+        if (savedAnswers && Object.keys(savedAnswers).length > 0) {
+          setAnswers(savedAnswers);
+          setSavedResponses(savedResponses || []);
+          if (savedSessionId) setSessionId(savedSessionId);
+          toast.info('Restored your previous quiz progress.', { duration: 3000 });
+        }
+      } catch (e) {
+        console.error('Error restoring quiz backup:', e);
+      }
+    }
+  }, []);
+
+  // Save answers to localStorage whenever they change (for recovery)
+  useEffect(() => {
+    if (Object.keys(answers).length > 0 && sessionId) {
+      localStorage.setItem(QUIZ_BACKUP_KEY, JSON.stringify({
+        answers,
+        savedResponses,
+        sessionId,
+        timestamp: Date.now()
+      }));
+    }
+  }, [answers, savedResponses, sessionId]);
+
+  // Timer
+  useEffect(() => {
+    if (isPaused) return;
+    
+    const timer = setInterval(() => {
+      setTimeElapsed((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isPaused]);
+
+  // Shuffle array utility function
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Load quiz questions from database based on user profile
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        // Get user profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error('Please log in to take the quiz');
+          navigate('/login');
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('class_level, study_area, interests, preferred_state, preferred_district, current_study_level, current_course, target_course_interest, primary_target')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        // Validate profile completeness - check for new or legacy fields
+        const hasLegacyProfile = profile?.class_level && profile?.study_area;
+        const hasNewProfile = profile?.current_study_level && profile?.current_course;
+        
+        if (!hasLegacyProfile && !hasNewProfile) {
+          toast.error('Please complete your profile before taking the quiz', { duration: 4000 });
+          navigate('/onboarding');
+          return;
+        }
+
+        // Get past quiz scores for profile context
+        const { data: pastSessions } = await supabase
+          .from('quiz_sessions')
+          .select('category_scores')
+          .eq('user_id', user.id)
+          .eq('completed', true)
+          .order('completed_at', { ascending: false })
+          .limit(3);
+
+        const pastScores = pastSessions?.flatMap(session => 
+          session.category_scores 
+            ? Object.entries(session.category_scores as Record<string, any>).map(([category, scores]: [string, any]) => ({
+                category,
+                score: Math.round((scores.total / scores.max) * 100)
+              }))
+            : []
+        ) || [];
+
+        // Build comprehensive user profile for quiz generation
+        // Use new profile fields if available, fallback to legacy
+        const userProfile = {
+          userId: user.id,
+          class_level: profile.class_level || 'UG',
+          study_area: profile.study_area || 'All',
+          interests: profile.target_course_interest || profile.interests || [],
+          location: {
+            state: profile.preferred_state,
+            district: profile.preferred_district
+          },
+          past_scores: pastScores,
+          // Enhanced profile data
+          current_study_level: profile.current_study_level,
+          current_course: profile.current_course,
+          primary_target: profile.primary_target,
+        };
+        
+        console.log('[Quiz] User profile for quiz generation:', userProfile);
+
+        // Fetch filtered questions using the database function
+        const { data, error } = await supabase
+          .rpc('get_filtered_quiz_questions', {
+            p_class_level: profile.class_level,
+            p_study_area: profile.study_area,
+            p_limit: 20
+          });
+
+        if (error) throw error;
+
+        // If no questions found, generate new ones using AI with full profile
+        if (!data || data.length === 0) {
+          toast.info('Generating personalized questions for you...', { duration: 3000 });
+          
+          const { data: generatedData, error: genError } = await supabase.functions.invoke(
+            'generate-quiz-questions',
+            {
+              body: { 
+                profile: userProfile
+                // seed: 12345 // Optional: for deterministic debugging
+              }
+            }
+          );
+
+          if (genError) {
+            console.error('Error generating questions:', genError);
+            const errorMessage = (genError as any).message || 'Failed to generate quiz questions';
+            const errorCode = (genError as any).code;
+            
+            if (errorCode === 'ERR_MISSING_PROFILE_FIELD') {
+              toast.error('Profile incomplete. Please update your profile.', { duration: 4000 });
+              navigate('/profile');
+            } else {
+              toast.error(errorMessage, { duration: 4000 });
+              navigate('/dashboard');
+            }
+            return;
+          }
+
+          if (generatedData?.questions && generatedData.questions.length > 0) {
+            // Questions are already shuffled by edge function if seed provided
+            const questions = generatedData.questions.map((q: any) => ({
+              ...q,
+              options: Array.isArray(q.options) ? q.options : q.options?.options || []
+            }));
+            setQuizQuestions(questions);
+            
+            const sourceText = generatedData.source === 'fallback_bank' 
+              ? 'from verified question bank' 
+              : 'AI-generated';
+            toast.success(`Personalized quiz ready! (${sourceText})`, { duration: 2000 });
+          } else {
+            toast.error('No questions available. Please try again later.', { duration: 4000 });
+            navigate('/dashboard');
+          }
+        } else {
+          // Shuffle questions and their options from database
+          const shuffledQuestions = shuffleArray(data).map((q: any) => ({
+            ...q,
+            options: shuffleArray(Array.isArray(q.options) ? q.options : q.options?.options || [])
+          }));
+          setQuizQuestions(shuffledQuestions);
+        }
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        toast.error('Failed to load quiz questions');
+        navigate('/dashboard');
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+
+    loadQuestions();
+  }, [navigate]);
+
+  // Initialize quiz session
+  useEffect(() => {
+    if (quizQuestions.length === 0) return;
+
+    const initSession = async () => {
+      const session = await startNewSession();
+      if (session) {
+        setSessionId(session.id);
+      } else {
+        toast.error('Failed to start quiz. Please try again.');
+        navigate('/dashboard');
+      }
+    };
+    
+    initSession();
+  }, [quizQuestions]);
+
+  const handleAnswerSelect = async (optionIndex: number) => {
+    if (!sessionId) {
+      toast.error('Quiz session not initialized. Please refresh and try again.');
+      return;
+    }
+
+    // Validation: Ensure option is valid
+    if (optionIndex < 0) {
+      toast.error('Please select a valid answer option.');
+      return;
+    }
+
+    const question = quizQuestions[currentQuestion];
+    const options = Array.isArray(question.options) ? question.options : question.options?.options || [];
+    
+    // Validation: Check if option exists
+    if (optionIndex >= options.length) {
+      toast.error('Invalid answer option selected.');
+      return;
+    }
+
+    const newAnswers = { ...answers, [question.id]: optionIndex };
+    setAnswers(newAnswers);
+
+    // Save response to server immediately
+    try {
+      const selectedOptionText = typeof options[optionIndex] === 'string' 
+        ? options[optionIndex] 
+        : options[optionIndex]?.text || `Option ${optionIndex + 1}`;
+
+      // Calculate points earned (1-5 scale based on option or default to 1)
+      const pointsEarned = typeof options[optionIndex] === 'object' 
+        ? options[optionIndex]?.points || 1
+        : 1;
+      
+      const saved = await saveResponse(
+        sessionId,
+        question.id,
+        selectedOptionText,
+        pointsEarned
+      );
+
+      if (!saved) {
+        throw new Error('Failed to save response');
+      }
+
+      const existingIndex = savedResponses.findIndex(r => r.question_id === question.id);
+      if (existingIndex >= 0) {
+        const updated = [...savedResponses];
+        updated[existingIndex] = {
+          question_id: question.id,
+          category: question.category,
+          selected_option: selectedOptionText,
+          points_earned: pointsEarned
+        };
+        setSavedResponses(updated);
+      } else {
+        setSavedResponses([...savedResponses, {
+          question_id: question.id,
+          category: question.category,
+          selected_option: selectedOptionText,
+          points_earned: pointsEarned
+        }]);
+      }
+      toast.success('Answer saved ✓', { duration: 1000 });
+    } catch (error) {
+      console.error('Error saving answer:', error);
+      toast.error('Failed to save answer. Please try again.');
+      // Revert the local answer state on error
+      const revertedAnswers = { ...answers };
+      delete revertedAnswers[question.id];
+      setAnswers(revertedAnswers);
+    }
+  };
+
+  const handleNext = () => {
+    // Validation: Ensure current question is answered before proceeding
+    const currentQuestionId = quizQuestions[currentQuestion]?.id;
+    if (!currentQuestionId || !(currentQuestionId in answers)) {
+      toast.error('Please answer the current question before proceeding.', { duration: 2000 });
+      return;
+    }
+
+    if (currentQuestion < quizQuestions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Validation: Check all questions are answered
+    const unanswered = quizQuestions.filter(q => !(q.id in answers));
+    if (unanswered.length > 0) {
+      const unansweredNumbers = unanswered.map(q => quizQuestions.indexOf(q) + 1).join(', ');
+      toast.error(`Please answer all questions. Missing: Question(s) ${unansweredNumbers}`, { duration: 4000 });
+      
+      // Jump to first unanswered question
+      const firstUnanswered = quizQuestions.findIndex(q => !(q.id in answers));
+      if (firstUnanswered >= 0) {
+        setCurrentQuestion(firstUnanswered);
+      }
+      return;
+    }
+
+    // Validation: Ensure session exists
+    if (!sessionId) {
+      toast.error('Quiz session error. Please refresh and try again.');
+      return;
+    }
+
+    // Validation: Ensure responses are saved
+    if (savedResponses.length === 0) {
+      toast.error('No answers saved. Please answer the questions and try again.');
+      return;
+    }
+
+    // Validation: Ensure all answered questions have saved responses
+    if (savedResponses.length !== quizQuestions.length) {
+      toast.error(`Only ${savedResponses.length} of ${quizQuestions.length} answers were saved. Please review your answers.`);
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Get current user for recommendations
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Session expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+
+      console.log('[Quiz] Starting submission flow...');
+      console.log('[Quiz] Session ID:', sessionId);
+      console.log('[Quiz] Saved responses:', savedResponses.length);
+
+      // Calculate total score and category scores
+      const totalPoints = savedResponses.reduce((sum, r) => sum + r.points_earned, 0);
+      const maxPoints = savedResponses.length * 5; // Assuming max 5 points per question
+      const score = Math.round((totalPoints / maxPoints) * 100);
+
+      console.log('[Quiz] Calculated score:', score, `(${totalPoints}/${maxPoints})`);
+
+      // Calculate category-wise scores
+      const categoryScores: Record<string, { total: number; max: number }> = {};
+      savedResponses.forEach(response => {
+        if (!categoryScores[response.category]) {
+          categoryScores[response.category] = { total: 0, max: 0 };
+        }
+        categoryScores[response.category].total += response.points_earned;
+        categoryScores[response.category].max += 5;
+      });
+
+      console.log('[Quiz] Category scores:', categoryScores);
+
+      // Complete the session with category scores
+      await completeSession(sessionId, score);
+      
+      // Update session with category scores
+      const { error: updateError } = await supabase
+        .from('quiz_sessions')
+        .update({ category_scores: categoryScores })
+        .eq('id', sessionId);
+
+      if (updateError) {
+        console.error('[Quiz] Error updating category scores:', updateError);
+      }
+
+      console.log('[Quiz] Session completed, generating recommendations...');
+
+      // Generate AI recommendations with user ID
+      toast.info('Generating personalized career recommendations...', { duration: 3000 });
+      
+      try {
+        const result = await generateRecommendations(sessionId, savedResponses, user.id);
+        console.log('[Quiz] Recommendations generated:', result);
+        toast.success('Quiz submitted and recommendations generated!');
+      } catch (recError) {
+        console.error('[Quiz] Error generating recommendations:', recError);
+        // Retry logic for recommendations
+        if (retryCount < 1) {
+          setRetryCount(prev => prev + 1);
+          toast.info('Retrying recommendation generation...');
+          try {
+            await generateRecommendations(sessionId, savedResponses, user.id);
+          } catch (retryError) {
+            toast.error('Recommendation generation failed. You can view partial results.');
+          }
+        } else {
+          toast.error('Quiz saved but recommendation generation failed. You can view partial results.');
+        }
+      }
+
+      // Clear backup on successful submission
+      localStorage.removeItem(QUIZ_BACKUP_KEY);
+
+      // Exit full-screen mode
+      await exitFullScreen();
+
+      // Navigate to results with session ID
+      navigate(`/quiz/results?session=${sessionId}`);
+    } catch (error) {
+      console.error('[Quiz] Error submitting quiz:', error);
+      
+      // Allow retry on submission failure
+      if (retryCount < 1) {
+        setRetryCount(prev => prev + 1);
+        toast.error('Failed to submit quiz. Click submit again to retry.');
+      } else {
+        toast.error('Failed to submit quiz after retry. Your answers are saved locally. Please try again later.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveAndExit = () => {
+    toast.success("Progress saved! You can resume anytime.");
+    navigate('/dashboard');
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Check eligibility before showing quiz
+  if (eligibilityLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center">
+        <div className="text-center animate-fade-up">
+          <div className="relative">
+            <div className="absolute inset-0 animate-pulse-glow rounded-full" />
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary relative z-10" />
+          </div>
+          <p className="text-muted-foreground text-lg">Checking quiz eligibility...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show ineligibility screen if user has already taken quiz this year
+  if (!canTakeQuiz && hasCompletedQuizThisYear) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center px-4">
+        <Card className="max-w-lg w-full border-primary/20 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="w-20 h-20 mx-auto rounded-full bg-yellow-500/20 flex items-center justify-center mb-4">
+              <AlertTriangle className="h-10 w-10 text-yellow-500" />
+            </div>
+            <CardTitle className="text-2xl">Quiz Already Completed</CardTitle>
+            <CardDescription className="text-base mt-2">
+              {eligibilityReason}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              The aptitude quiz can only be taken once per year to ensure accurate and consistent recommendations.
+              You can view your existing results or explore recommended opportunities.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild variant="outline">
+              <Link to="/dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/my-result">View My Results</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show termination screen if quiz was terminated (ESC key pressed or too many violations)
+  if (isTerminated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-destructive/5 to-background flex items-center justify-center px-4">
+        <Card className="max-w-lg w-full border-destructive/30 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="w-20 h-20 mx-auto rounded-full bg-destructive/20 flex items-center justify-center mb-4">
+              <AlertTriangle className="h-10 w-10 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl text-destructive">Quiz Terminated</CardTitle>
+            <CardDescription className="text-base mt-2">
+              This quiz attempt has been invalidated
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <p className="text-destructive font-medium">
+                {terminationReason || 'Quiz was terminated due to a policy violation.'}
+              </p>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              To maintain fairness, this attempt cannot be resumed. Your answers were not submitted.
+              You can return to the dashboard and try again later if eligible.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3 justify-center">
+            <Button asChild className="w-full">
+              <Link to="/dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Return to Dashboard
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show start quiz screen with full-screen prompt
+  if (!quizStarted && quizQuestions.length > 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center px-4">
+        <Card className="max-w-lg w-full border-primary/20 shadow-xl animate-scale-in">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <AvsarLogo size="xl" />
+            </div>
+            <CardTitle className="text-2xl">Ready to Begin?</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Your personalized aptitude assessment is ready.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+              <h4 className="font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                Important Instructions
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• {quizQuestions.length} questions to answer</li>
+                <li>• Do not switch tabs or leave the quiz</li>
+                <li>• Your answers are auto-saved</li>
+                <li>• Complete all questions before submitting</li>
+                {fullScreenSupported && (
+                  <li>• Quiz will open in full-screen mode</li>
+                )}
+              </ul>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={async () => {
+                if (fullScreenSupported) {
+                  await enterFullScreen();
+                }
+                setQuizStarted(true);
+              }}
+            >
+              <Maximize2 className="h-4 w-4 mr-2" />
+              Start Quiz
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loadingQuestions || quizQuestions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center">
+        <div className="text-center animate-fade-up">
+          <div className="relative">
+            <div className="absolute inset-0 animate-pulse-glow rounded-full" />
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary relative z-10" />
+          </div>
+          <p className="text-muted-foreground text-lg">Loading quiz questions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const currentQuestionData = quizQuestions[currentQuestion];
+  const selectedAnswer = answers[currentQuestionData?.id];
+  const options = Array.isArray(currentQuestionData?.options) 
+    ? currentQuestionData.options 
+    : currentQuestionData?.options?.options || [];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 py-8 px-4">
+      <div className="container max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 animate-fade-up">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <AvsarLogo size="md" showText={false} />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Aptitude Assessment
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-5 w-5" />
+                <span className="font-mono">{formatTime(timeElapsed)}</span>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save & Exit
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Save your progress?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Your answers will be saved and you can continue later from where you left off.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Continue Quiz</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSaveAndExit}>Save & Exit</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Question {currentQuestion + 1} of {quizQuestions.length}</span>
+              <span className="font-bold text-primary">{Math.round(progress)}% Complete</span>
+            </div>
+            <Progress value={progress} className="h-3 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-accent [&>div]:animate-pulse" />
+          </div>
+        </div>
+
+        {/* Question Card */}
+        <Card className="mb-6 border-primary/20 shadow-xl hover:shadow-2xl transition-all duration-300 animate-scale-in">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-primary bg-gradient-to-r from-primary/10 to-accent/10 px-4 py-2 rounded-full border border-primary/20 animate-pulse-glow">
+                {currentQuestionData.category}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {Object.keys(answers).length}/{quizQuestions.length} answered
+              </span>
+            </div>
+            <CardTitle className="text-xl">{currentQuestionData.question_text}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              key={currentQuestionData.id}
+              value={selectedAnswer !== undefined ? selectedAnswer.toString() : ""}
+              onValueChange={(value) => handleAnswerSelect(parseInt(value))}
+            >
+              <div className="space-y-3">
+                {options.map((option: any, index: number) => {
+                  const optionText = typeof option === 'string' ? option : option?.text || `Option ${index + 1}`;
+                  const isSelected = selectedAnswer === index;
+                  return (
+                    <div
+                      key={`${currentQuestionData.id}-opt-${index}`}
+                      className={`flex items-center space-x-3 border-2 rounded-lg p-4 transition-all duration-300 cursor-pointer
+                        ${isSelected 
+                          ? 'bg-gradient-to-r from-primary/10 to-accent/10 border-primary shadow-lg scale-105' 
+                          : 'border-muted hover:border-primary/50 hover:bg-accent/20 hover:scale-102'
+                        }`}
+                    >
+                      <RadioGroupItem 
+                        value={index.toString()} 
+                        id={`${currentQuestionData.id}-option-${index}`} 
+                      />
+                      <Label
+                        htmlFor={`${currentQuestionData.id}-option-${index}`}
+                        className="flex-1 cursor-pointer font-normal"
+                      >
+                        {optionText}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </RadioGroup>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentQuestion === 0}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            <Button
+              onClick={handleNext}
+              disabled={selectedAnswer === undefined || submitting}
+              className={selectedAnswer === undefined ? 'opacity-50 cursor-not-allowed' : ''}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : currentQuestion === quizQuestions.length - 1 ? (
+                'Submit Quiz'
+              ) : (
+                <>
+                  Next Question
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Question Navigator */}
+        <Card>
+          <CardHeader>
+            <CardDescription>Quick Navigation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-10 gap-2">
+              {quizQuestions.map((q, index) => (
+                <Button
+                  key={q.id}
+                  variant={index === currentQuestion ? "default" : (q.id in answers) ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentQuestion(index)}
+                  className="w-full"
+                >
+                  {index + 1}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
