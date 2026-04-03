@@ -29,7 +29,6 @@ export default function CareerRoadmapPage() {
   const [targetCareer, setTargetCareer] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [savedRoadmaps, setSavedRoadmaps] = useState<any[]>([]);
   const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
 
   const toggleFlip = (index: number) => {
@@ -39,20 +38,10 @@ export default function CareerRoadmapPage() {
   };
 
   useEffect(() => {
-    if (user) loadSavedRoadmaps();
+    if (user) initializePage();
   }, [user]);
 
-  const loadSavedRoadmaps = async () => {
-    const { data } = await supabase
-      .from("career_roadmaps")
-      .select("*")
-      .eq("user_id", user!.id)
-      .order("updated_at", { ascending: false });
-    if (data) setSavedRoadmaps(data);
-    if (data && data.length > 0) {
-      setRoadmap(data[0].roadmap_json as unknown as RoadmapStep[]);
-      setTargetCareer(data[0].target_career || "");
-    }
+  const initializePage = () => {
     setInitialLoading(false);
   };
 
@@ -81,7 +70,6 @@ export default function CareerRoadmapPage() {
       setRoadmap(data.roadmap);
       setTargetCareer(data.targetCareer);
       toast.success("Roadmap generated!");
-      loadSavedRoadmaps();
     } catch (e: any) {
       toast.error(e.message || "An unexpected error occurred");
     } finally {
