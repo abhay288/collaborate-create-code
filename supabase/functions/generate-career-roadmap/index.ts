@@ -33,6 +33,40 @@ serve(async (req: Request) => {
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     const language = profile?.preferred_language || 'en';
 
+    // ========== GUARDRAILS: Block inappropriate/unprofessional inputs ==========
+    const BLOCKED_CAREERS = ['thief', 'chor', 'beggar', 'bhikhari', 'hitman', 'smuggler', 'drug dealer', 'scammer', 'fraudster', 'pickpocket', 'prostitute', 'terrorist', 'gangster', 'mafia', 'serial killer', 'dacoit', 'extortionist', 'blackmailer', 'pirate', 'kidnapper'];
+    
+    const FUNNY_RESPONSES: Record<string, string> = {
+      thief: "\ud83d\udea8 Sorry, AVSAR doesn't offer a B.Tech in Burglary! But Ethical Hacking pays \u20b915-50 LPA and you get PAID to break into systems. Much better benefits \u2014 no jail time! Try 'Cybersecurity Expert' instead. \ud83d\udd10",
+      chor: "\ud83d\udea8 \u092e\u093e\u092b\u093c \u0915\u0930\u094b \u092d\u093e\u0908, '\u092a\u094d\u0930\u094b\u092b\u0947\u0936\u0928\u0932 \u091a\u094b\u0930' \u0915\u093e \u0915\u094b\u0908 \u0915\u094b\u0930\u094d\u0938 \u0928\u0939\u0940\u0902 \u0939\u0948! Ethical Hacking \u092e\u0947\u0902 \u20b915-50 LPA \u092e\u093f\u0932\u0924\u0947 \u0939\u0948\u0902\u0964 'Cybersecurity Expert' \u091f\u094d\u0930\u093e\u0908 \u0915\u0930\u094b! \ud83d\udd10",
+      beggar: "\ud83d\ude4f AVSAR recommends careers with... you know, a salary! How about Social Work or NGO Management? Same energy, steady income! Try 'Social Worker' instead. \ud83d\udcbc",
+      bhikhari: "\ud83d\ude4f \u092d\u093e\u0908, \u092d\u0940\u0916 \u092e\u093e\u0902\u0917\u0928\u0947 \u0915\u093e \u0930\u094b\u0921\u092e\u0948\u092a? \u0939\u092e\u093e\u0930\u0947 \u092a\u093e\u0938 \u0935\u094b \u0928\u0939\u0940\u0902 \u0939\u0948! Social Work \u092e\u0947\u0902 \u0938\u0930\u0915\u093e\u0930\u0940 \u0928\u094c\u0915\u0930\u0940 \u092e\u093f\u0932\u0924\u0940 \u0939\u0948! '\u0938\u093e\u092e\u093e\u091c\u093f\u0915 \u0915\u093e\u0930\u094d\u092f\u0915\u0930\u094d\u0924\u093e' \u091f\u094d\u0930\u093e\u0908 \u0915\u0930\u094b! \ud83d\udcbc",
+      hitman: "\ud83c\udfaf John Wick is fictional! How about Defense Officer or Armed Forces? Same intensity, actual pension! Try 'Defense Officer'. \ud83c\udf96\ufe0f",
+      smuggler: "\ud83d\udce6 Smuggling has a 100% chance of free government housing (jail)! Try Supply Chain Management \u2014 \u20b98-25 LPA and you go HOME after work! \ud83c\udfe0",
+      'drug dealer': "\ud83d\udc8a Breaking Bad was a TV show, not a career guide! Pharmacy pays \u20b95-15 LPA legally. Try 'Pharmacist'! \ud83e\uddea",
+      scammer: "\ud83d\udcde 'Hello, I am calling from Microsoft' is NOT a career! Try Cybersecurity Analyst \u2014 \u20b910-40 LPA to CATCH scammers. \ud83e\uddb8",
+      gangster: "\ud83d\udd2b Gangs of Wasseypur was entertainment, not LinkedIn! Try 'Forensic Scientist' instead. \ud83d\udd2c",
+      terrorist: "\u26d4 This is not something we can help with. Please use AVSAR for legitimate career guidance. If you're going through a tough time, reach out to iCall: 9152987821. \ud83d\udd4a\ufe0f",
+    };
+    
+    const checkBlockedInput = (input: string): string | null => {
+      const lower = input.toLowerCase().trim();
+      for (const blocked of BLOCKED_CAREERS) {
+        if (lower === blocked || lower.includes(blocked)) {
+          return FUNNY_RESPONSES[blocked] || `\ud83d\ude05 "${input}" is not exactly what career counselors recommend! Try something like Engineering, Medicine, Law, or Business! \ud83d\ude80`;
+        }
+      }
+      return null;
+    };
+
+    // Check for blocked input BEFORE calling AI
+    const blockedResponse = checkBlockedInput(targetCareer);
+    if (blockedResponse) {
+      return new Response(JSON.stringify({ error: blockedResponse, isGuidance: true }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     // Fetch latest quiz scores
     const { data: latestSession } = await supabase
       .from("quiz_sessions")
@@ -72,10 +106,7 @@ ROADMAP STRATEGY:
 - Mention real-world internships, projects, and networking steps (LinkedIn, hackathons, moot courts).
 - **STRICT LANGUAGE COMPLIANCE**: All fields (titles, actions, skills, milestones, schemes, courses) MUST be entirely in ${language === 'hi' ? 'Hindi (हिन्दी)' : 'English'}.
 
-CRITICAL CLASSIFICATION RULE:
-- FIRST classify "${targetCareer}" using STEP 1 from your instructions.
-- If the classification is "unprofessional" (e.g., thief, beggar, hitman, smuggler, scammer, drug dealer), "irrelevant", "unrealistic", or "offensive": Do NOT call the create_roadmap tool. Instead, respond with a plain text message following STEP 5 rules (funny/sarcastic for unprofessional, light humor for irrelevant/unrealistic).
-- ONLY call the create_roadmap tool if the career is classified as "valid".`;
+Return structured tool calls only.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -120,7 +151,7 @@ CRITICAL CLASSIFICATION RULE:
             },
           },
         }],
-        tool_choice: "auto",
+        tool_choice: { type: "function", function: { name: "create_roadmap" } },
       }),
     });
 
