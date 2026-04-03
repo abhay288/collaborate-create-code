@@ -36,7 +36,7 @@ serve(async (req) => {
 
     const callAI = async (messages: any[], tools?: any[], toolChoice?: any, temperature = 0.7, maxTokens = 1200) => {
       const payload: any = { 
-        model: "google/gemini-1.5-flash", 
+        model: "google/gemini-2.0-flash-001",
         messages: [
           { role: "system", content: CAREER_TOOL_SYSTEM_PROMPT(body.language || 'en') },
           ...messages
