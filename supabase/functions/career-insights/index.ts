@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { CAREER_TOOL_SYSTEM_PROMPT } from "../_shared/career-logic.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,23 +26,36 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action } = body;
+    const action = body.action || body.type; // Unified action/type parsing
+    console.log(`[CareerInsights] Action: ${action}`);
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
     const callAI = async (messages: any[], tools?: any[], toolChoice?: any, temperature = 0.7, maxTokens = 1200) => {
-      const payload: any = { model: "google/gemini-3-flash-preview", messages, temperature, max_tokens: maxTokens };
+      const payload: any = { 
+        model: "google/gemini-1.5-flash", 
+        messages: [
+          { role: "system", content: CAREER_TOOL_SYSTEM_PROMPT(body.language || 'en') },
+          ...messages
+        ], 
+        temperature, 
+        max_tokens: maxTokens 
+      };
+      
       if (tools) { payload.tools = tools; payload.tool_choice = toolChoice; }
+      
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      
       if (!response.ok) {
-        if (response.status === 429) throw new Error("Rate limit exceeded, please try again later.");
-        if (response.status === 402) throw new Error("Payment required, please add credits.");
+        if (response.status === 429) throw new Error("Rate limit exceeded");
+        if (response.status === 402) throw new Error("Payment required");
         throw new Error("AI service error");
       }
       return response.json();
@@ -73,9 +87,18 @@ serve(async (req) => {
 
     // ========== CAREER TWIN ==========
     if (action === "career_twin") {
-      const prompt = `You are an AI Career Twin generator. Based on this student's profile, create their "Career Twin" — a digital career persona.
-Profile: Education: ${profile?.current_study_level || "Unknown"}, ${profile?.current_course || "Unknown"}, Interests: ${(profile?.interests || []).join(", ") || "Not specified"}, Target: ${profile?.primary_target || "Not specified"}, State: ${profile?.preferred_state || "Not specified"}, Scores: Overall ${profile?.overall_score || "N/A"}, Logical ${profile?.logical_score || "N/A"}, Verbal ${profile?.verbal_score || "N/A"}, Creative ${profile?.creative_score || "N/A"}, Technical ${profile?.technical_score || "N/A"}.
-Generate: 1. Career Archetype name 2. Personality-Career Match 3. Top 3 Ideal Career Paths with match % 4. Hidden Strengths 5. Career Twin Match (famous person) 6. 6-Month Action Plan 7. Risk & Opportunity. Indian context. Use markdown.`;
+      const prompt = `Based on this student's profile, create their "Career Twin" — a digital career persona and archetype.
+Student History: ${profile?.current_study_level || "Unknown"}, ${profile?.current_course || "Unknown"}. Interests: ${(profile?.interests || []).join(", ") || "Not specified"}. Primary Target: ${profile?.primary_target || "Not specified"}.
+Aptitude Analysis: Overall ${profile?.overall_score || "N/A"}, Logical ${profile?.logical_score || "N/A"}, Verbal ${profile?.verbal_score || "N/A"}, Creative ${profile?.creative_score || "N/A"}, Technical ${profile?.technical_score || "N/A"}.
+
+OUTPUT STRUCTURE (Markdown):
+1. **Career Archetype**: (A creative title like "The Strategic Architect" or "The Creative Problem Solver")
+2. **The "Twin" Persona**: (Detailed match between their personality and real-world career roles)
+3. **Top 3 Career Tracks**: (With realistic Match % and Indian context)
+4. **Hidden Strengths & Real-world Twin**: (A famous professional archetype they resemble)
+5. **6-Month Skill-Up Plan**: (Specific steps targeting their target: ${profile?.primary_target})
+6. **Market Reality Check**: (Risk vs Opportunity in the current Indian economy)`;
+      
       const data = await callAI([{ role: "user", content: prompt }], undefined, undefined, 0.8, 1500);
       const result = data.choices?.[0]?.message?.content || "Could not generate Career Twin.";
       return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

@@ -63,13 +63,27 @@ export default function CareerRoadmapPage() {
       const { data, error } = await supabase.functions.invoke("generate-career-roadmap", {
         body: { targetCareer: career.trim() },
       });
-      if (error) throw error;
+      
+      if (error) {
+        // Handle AI-guided redirection or validation errors
+        let errorMessage = "Failed to generate roadmap";
+        try {
+          const errorBody = await error.context.json();
+          if (errorBody.error) errorMessage = errorBody.error;
+        } catch (e) {
+          errorMessage = error.message || errorMessage;
+        }
+        toast.error(errorMessage, { duration: 5000 });
+        setLoading(false);
+        return;
+      }
+
       setRoadmap(data.roadmap);
       setTargetCareer(data.targetCareer);
       toast.success("Roadmap generated!");
       loadSavedRoadmaps();
     } catch (e: any) {
-      toast.error(e.message || "Failed to generate roadmap");
+      toast.error(e.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -140,25 +154,6 @@ export default function CareerRoadmapPage() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><ChevronRight className="h-4 w-4 mr-1" /> Navigate</>}
               </Button>
             </div>
-
-            {savedRoadmaps.length > 1 && (
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm text-muted-foreground mr-1">Saved routes:</span>
-                {savedRoadmaps.map(r => (
-                  <Badge
-                    key={r.id}
-                    variant={r.target_career === targetCareer ? "default" : "outline"}
-                    className="cursor-pointer transition-all hover:scale-105"
-                    onClick={() => {
-                      setRoadmap(r.roadmap_json as unknown as RoadmapStep[]);
-                      setTargetCareer(r.target_career);
-                    }}
-                  >
-                    {r.target_career}
-                  </Badge>
-                ))}
-              </div>
-            )}
 
             {initialLoading && (
               <div className="space-y-4">

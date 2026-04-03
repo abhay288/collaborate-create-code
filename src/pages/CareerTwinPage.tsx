@@ -53,11 +53,15 @@ const CareerTwinPage = () => {
         }),
       });
 
-      if (!resp.ok) throw new Error("Failed to generate");
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate Career Twin");
+      }
+      
       const data = await resp.json();
       setResult(data.result || data.analysis || JSON.stringify(data, null, 2));
-    } catch (e) {
-      toast.error("Failed to generate Career Twin analysis");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate Career Twin analysis");
     } finally {
       setLoading(false);
     }
