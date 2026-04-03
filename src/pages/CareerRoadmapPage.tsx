@@ -56,13 +56,19 @@ export default function CareerRoadmapPage() {
       if (error) {
         // Handle AI-guided redirection or validation errors
         let errorMessage = "Failed to generate roadmap";
+        let isGuidance = false;
         try {
           const errorBody = await error.context.json();
           if (errorBody.error) errorMessage = errorBody.error;
+          if (errorBody.isGuidance) isGuidance = true;
         } catch (e) {
           errorMessage = error.message || errorMessage;
         }
-        toast.error(errorMessage, { duration: 5000 });
+        if (isGuidance) {
+          toast.info(errorMessage, { duration: 8000 });
+        } else {
+          toast.error(errorMessage, { duration: 5000 });
+        }
         setLoading(false);
         return;
       }

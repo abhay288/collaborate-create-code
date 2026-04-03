@@ -34,6 +34,32 @@ serve(async (req) => {
 
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
+    // ========== GUARDRAILS: Block inappropriate/unprofessional inputs ==========
+    const BLOCKED_CAREERS = ['thief', 'chor', 'beggar', 'bhikhari', 'hitman', 'smuggler', 'drug dealer', 'scammer', 'fraudster', 'pickpocket', 'prostitute', 'terrorist', 'gangster', 'mafia', 'serial killer', 'dacoit', 'extortionist', 'blackmailer', 'pirate', 'kidnapper'];
+    
+    const FUNNY_RESPONSES: Record<string, string> = {
+      thief: "🚨 Sorry, AVSAR doesn't offer a B.Tech in Burglary! But hey, Ethical Hacking pays ₹15-50 LPA and you actually get PAID to break into systems. Much better benefits package — no jail time included! Try 'Cybersecurity Expert' instead. 🔐",
+      chor: "🚨 माफ़ करो भाई, 'प्रोफेशनल चोर' का कोई कोर्स नहीं है! लेकिन Ethical Hacking में ₹15-50 LPA मिलते हैं और लोग तुम्हें हैक करने के लिए पैसे देते हैं। जेल की हवा vs AC ऑफिस — choice is yours! 🔐",
+      beggar: "🙏 We respect hustle, but AVSAR recommends careers with... you know, a salary! How about Social Work or NGO Management? Same helping-people energy, but with a steady income, health insurance, and dignity! Try 'Social Worker' instead. 💼",
+      bhikhari: "🙏 भाई, भीख मांगने का रोडमैप? हमारे पास वो नहीं है! लेकिन Social Work में सरकारी नौकरी मिलती है — PM-YUVA scheme से ट्रेनिंग भी फ्री! 'सामाजिक कार्यकर्ता' ट्राई करो! 💼",
+      hitman: "🎯 John Wick is fictional, and his retirement plan is terrible! How about becoming a Defense Strategist or joining the Indian Armed Forces? Same intensity, actual pension, and your mom can actually tell people what you do! Try 'Defense Officer'. 🎖️",
+      smuggler: "📦 Smuggling has a 100% chance of free government housing (jail)! Try Supply Chain Management instead — same logistics skills, ₹8-25 LPA salary, and you get to go HOME after work! 🏠",
+      'drug dealer': "💊 Breaking Bad was a TV show, not a career guide! Pharmacy pays ₹5-15 LPA, is completely legal, and you still get to count pills. Try 'Pharmacist' — Walter White approved! 🧪",
+      scammer: "📞 'Hello, I am calling from Microsoft' is NOT a career! Try Cybersecurity Analyst instead — companies pay ₹10-40 LPA to CATCH scammers. Be the hero, not the villain! 🦸",
+      gangster: "🔫 Gangs of Wasseypur was entertainment, not a LinkedIn tutorial! How about Criminal Psychology or Forensic Science? Same fascination with crime, but you're on the RIGHT side! Try 'Forensic Scientist'. 🔬",
+      terrorist: "⛔ This is not something we can help with. Please use AVSAR for legitimate career guidance. If you're going through a tough time, reach out to iCall: 9152987821. We're here to help you build a positive future. 🕊️",
+    };
+    
+    const checkBlockedInput = (input: string): string | null => {
+      const lower = input.toLowerCase().trim();
+      for (const blocked of BLOCKED_CAREERS) {
+        if (lower === blocked || lower.includes(blocked)) {
+          return FUNNY_RESPONSES[blocked] || `😅 "${input}" is not exactly what career counselors recommend! How about we explore some careers that won't land you in the news (for the wrong reasons)? Try something like Engineering, Medicine, Law, or Business! 🚀`;
+        }
+      }
+      return null;
+    };
+
     const callAI = async (messages: any[], tools?: any[], toolChoice?: any, temperature = 0.7, maxTokens = 1200) => {
       const payload: any = { 
         model: "google/gemini-2.5-flash",
@@ -66,6 +92,15 @@ serve(async (req) => {
     // ========== CAREER RISK ==========
     if (action === "career_risk") {
       const { careers } = body;
+      // Check for blocked inputs
+      for (const c of (careers || [])) {
+        const funnyResponse = checkBlockedInput(c);
+        if (funnyResponse) {
+          return new Response(JSON.stringify({ error: funnyResponse, isGuidance: true }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
       const data = await callAI(
         [{ role: "user", content: `Analyze automation and future risk for these careers: ${(careers || []).join(', ')}. For each: automation_risk_percent (0-100), industry_growth_percent (-10 to 30), future_demand_index (1-10), risk_level (low/medium/high), brief reasoning. Indian job market.` }],
         [{ type: "function", function: { name: "return_risk_analysis", parameters: { type: "object", properties: { careers: { type: "array", items: { type: "object", properties: { name: { type: "string" }, automation_risk_percent: { type: "number" }, industry_growth_percent: { type: "number" }, future_demand_index: { type: "number" }, risk_level: { type: "string" }, reasoning: { type: "string" } }, required: ["name","automation_risk_percent","industry_growth_percent","future_demand_index","risk_level","reasoning"] } } }, required: ["careers"] } } }],
@@ -78,6 +113,15 @@ serve(async (req) => {
     // ========== COMPARE CAREERS ==========
     if (action === "compare_careers") {
       const { career1, career2 } = body;
+      // Check for blocked inputs
+      for (const c of [career1, career2]) {
+        const funnyResponse = checkBlockedInput(c);
+        if (funnyResponse) {
+          return new Response(JSON.stringify({ error: funnyResponse, isGuidance: true }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
       const data = await callAI(
         [{ role: "user", content: `Compare "${career1}" vs "${career2}" for Indian student. For each: avg_salary_range (INR LPA), study_cost_estimate (INR), growth_rating (1-10), competition_level, time_to_establish (years), key_skills (5), top_exams, pros (3), cons (3), verdict.` }],
         [{ type: "function", function: { name: "return_comparison", parameters: { type: "object", properties: { career1: { type: "object", properties: { name:{type:"string"}, avg_salary_range:{type:"string"}, study_cost_estimate:{type:"string"}, growth_rating:{type:"number"}, competition_level:{type:"string"}, time_to_establish:{type:"number"}, key_skills:{type:"array",items:{type:"string"}}, top_exams:{type:"array",items:{type:"string"}}, pros:{type:"array",items:{type:"string"}}, cons:{type:"array",items:{type:"string"}} } }, career2: { type: "object", properties: { name:{type:"string"}, avg_salary_range:{type:"string"}, study_cost_estimate:{type:"string"}, growth_rating:{type:"number"}, competition_level:{type:"string"}, time_to_establish:{type:"number"}, key_skills:{type:"array",items:{type:"string"}}, top_exams:{type:"array",items:{type:"string"}}, pros:{type:"array",items:{type:"string"}}, cons:{type:"array",items:{type:"string"}} } }, verdict: { type: "string" } }, required: ["career1","career2","verdict"] } } }],

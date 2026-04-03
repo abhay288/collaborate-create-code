@@ -72,7 +72,10 @@ ROADMAP STRATEGY:
 - Mention real-world internships, projects, and networking steps (LinkedIn, hackathons, moot courts).
 - **STRICT LANGUAGE COMPLIANCE**: All fields (titles, actions, skills, milestones, schemes, courses) MUST be entirely in ${language === 'hi' ? 'Hindi (हिन्दी)' : 'English'}.
 
-Return structured tool calls only.`;
+CRITICAL CLASSIFICATION RULE:
+- FIRST classify "${targetCareer}" using STEP 1 from your instructions.
+- If the classification is "unprofessional" (e.g., thief, beggar, hitman, smuggler, scammer, drug dealer), "irrelevant", "unrealistic", or "offensive": Do NOT call the create_roadmap tool. Instead, respond with a plain text message following STEP 5 rules (funny/sarcastic for unprofessional, light humor for irrelevant/unrealistic).
+- ONLY call the create_roadmap tool if the career is classified as "valid".`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -117,7 +120,7 @@ Return structured tool calls only.`;
             },
           },
         }],
-        tool_choice: { type: "function", function: { name: "create_roadmap" } },
+        tool_choice: "auto",
       }),
     });
 
