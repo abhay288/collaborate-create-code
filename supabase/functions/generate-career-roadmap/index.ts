@@ -81,7 +81,7 @@ Return structured tool calls only.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
+        model: "google/gemini-2.0-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
@@ -128,7 +128,9 @@ Return structured tool calls only.`;
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      throw new Error(`AI gateway error: ${response.status}`);
+      const errorBody = await response.text();
+      console.error(`[Roadmap] AI gateway error ${response.status}:`, errorBody);
+      throw new Error(`AI gateway error ${response.status}: ${errorBody}`);
     }
 
     const result = await response.json();

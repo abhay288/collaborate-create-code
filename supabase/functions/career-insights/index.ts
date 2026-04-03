@@ -36,7 +36,7 @@ serve(async (req) => {
 
     const callAI = async (messages: any[], tools?: any[], toolChoice?: any, temperature = 0.7, maxTokens = 1200) => {
       const payload: any = { 
-        model: "google/gemini-2.0-flash-001",
+        model: "google/gemini-2.0-flash",
         messages: [
           { role: "system", content: CAREER_TOOL_SYSTEM_PROMPT(body.language || 'en') },
           ...messages
@@ -54,9 +54,11 @@ serve(async (req) => {
       });
       
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`[CareerInsights] AI gateway error ${response.status}:`, errorBody);
         if (response.status === 429) throw new Error("Rate limit exceeded");
         if (response.status === 402) throw new Error("Payment required");
-        throw new Error("AI service error");
+        throw new Error(`AI gateway ${response.status}: ${errorBody}`);
       }
       return response.json();
     };
