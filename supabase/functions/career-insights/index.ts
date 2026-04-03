@@ -131,21 +131,54 @@ serve(async (req) => {
       return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ========== CAREER TWIN ==========
     if (action === "career_twin") {
-      const prompt = `Based on this student's profile, create their "Career Twin" — a digital career persona and archetype.
-Student History: ${profile?.current_study_level || "Unknown"}, ${profile?.current_course || "Unknown"}. Interests: ${(profile?.interests || []).join(", ") || "Not specified"}. Primary Target: ${profile?.primary_target || "Not specified"}.
-Aptitude Analysis: Overall ${profile?.overall_score || "N/A"}, Logical ${profile?.logical_score || "N/A"}, Verbal ${profile?.verbal_score || "N/A"}, Creative ${profile?.creative_score || "N/A"}, Technical ${profile?.technical_score || "N/A"}.
+      const prompt = `Analyze this Indian student's profile and generate their Career Twin — a concise, structured career persona.
 
-OUTPUT STRUCTURE (Markdown):
-1. **Career Archetype**: (A creative title like "The Strategic Architect" or "The Creative Problem Solver")
-2. **The "Twin" Persona**: (Detailed match between their personality and real-world career roles)
-3. **Top 3 Career Tracks**: (With realistic Match % and Indian context)
-4. **Hidden Strengths & Real-world Twin**: (A famous professional archetype they resemble)
-5. **6-Month Skill-Up Plan**: (Specific steps targeting their target: ${profile?.primary_target})
-6. **Market Reality Check**: (Risk vs Opportunity in the current Indian economy)`;
+Student Profile:
+- Education: ${profile?.current_study_level || "Unknown"} | ${profile?.current_course || "Unknown"}
+- Interests: ${(profile?.interests || []).join(", ") || "Not specified"}
+- Target: ${profile?.primary_target || "Not specified"}
+- Scores: Overall ${profile?.overall_score || "N/A"}%, Logical ${profile?.logical_score || "N/A"}%, Verbal ${profile?.verbal_score || "N/A"}%, Creative ${profile?.creative_score || "N/A"}%, Technical ${profile?.technical_score || "N/A"}%
+
+STRICT OUTPUT FORMAT (use this exact structure, keep each point to 1-2 lines max):
+
+🎭 **Career Archetype**: [Creative title, e.g., "The Strategic Architect"]
+> [One-line description of their persona]
+
+---
+
+🏆 **Top 3 Career Matches** (sorted by match %):
+| Rank | Career | Match | Avg Salary (LPA) |
+|------|--------|-------|-------------------|
+| 1 | [Career] | [X]% | ₹X-X |
+| 2 | [Career] | [X]% | ₹X-X |
+| 3 | [Career] | [X]% | ₹X-X |
+
+---
+
+💪 **Key Strengths** (top 3):
+- [Strength 1]: [one-line why]
+- [Strength 2]: [one-line why]
+- [Strength 3]: [one-line why]
+
+---
+
+🌟 **Famous Career Twin**: [Real person name] — [one-line why they match]
+
+---
+
+📋 **90-Day Action Plan**:
+1. **Month 1**: [specific action]
+2. **Month 2**: [specific action]
+3. **Month 3**: [specific action]
+
+---
+
+⚡ **Market Reality**: [2-3 lines on demand, competition, and salary outlook in India]
+
+RULES: Be concise. No filler. No motivational quotes. Indian context only. Use rupees (₹) for salaries.`;
       
-      const data = await callAI([{ role: "user", content: prompt }], undefined, undefined, 0.8, 1500);
+      const data = await callAI([{ role: "user", content: prompt }], undefined, undefined, 0.7, 800);
       const result = data.choices?.[0]?.message?.content || "Could not generate Career Twin.";
       return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
