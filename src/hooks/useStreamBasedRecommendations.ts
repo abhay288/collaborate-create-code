@@ -275,11 +275,16 @@ const determineUserStream = (profile: Profile): string => {
   // Engineering (non-CS)
   if (currentCourse.includes('engineering') || currentCourse.includes('btech') ||
       currentCourse.includes('b.tech') || currentCourse.includes('mechanical') ||
-      currentCourse.includes('electrical') || currentCourse.includes('civil')) {
-    if (currentCourse.includes('pcm') || studyArea === 'science') {
-      return 'Engineering';
-    }
+      currentCourse.includes('electrical') || currentCourse.includes('civil') ||
+      currentCourse.includes('pcm')) {
     return 'Engineering';
+  }
+
+  // Medical
+  if (currentCourse.includes('medical') || currentCourse.includes('mbbs') || 
+      currentCourse.includes('nursing') || currentCourse.includes('pcb') ||
+      currentCourse.includes('biology')) {
+    return 'Medical';
   }
   
   // Study area fallback
@@ -885,10 +890,62 @@ export const useStreamBasedRecommendations = () => {
         }
       }
       
-      // NOTE: Only recommend colleges from user's state — no nearby/nationwide fallback
-      
-      // Nationwide fallback removed — only user's state colleges are shown
-      
+      // STEP 3: NATIONWIDE FALLBACK - If results are still low (< 5), fetch top colleges nationwide
+      if (allColleges.length < 5) {
+        const { data: nationalColleges, error: nationalError } = await supabase
+          .from('colleges')
+          .select('*')
+          .eq('is_active', true)
+          .order('rating', { ascending: false, nullsFirst: false })
+          .limit(50);
+        
+        if (!nationalError && nationalColleges) {
+          const filteredNationalColleges = nationalColleges
+            .filter(college => {
+              const specialization = (college.specialised_in || '').toLowerCase();
+              const collegeType = (college.college_type || '').toLowerCase();
+              const coursesStr = (college.courses_offered || []).join(' ').toLowerCase();
+              
+              const matchesStream = streamCollegeTypes.some(type => 
+                specialization.includes(type) || 
+                collegeType.includes(type) ||
+                coursesStr.includes(type)
+              );
+
+              // Don't duplicate colleges already found in state/district
+              return matchesStream && !allColleges.find(c => c.id === college.id);
+            })
+            .map(college => {
+              const { score, reason, explanations } = calculateRecommendationScore(
+                college, profileData, stream, 'nationwide'
+              );
+              
+              return {
+                id: college.id,
+                college_name: college.college_name || 'Unknown College',
+                state: college.state || 'Unknown',
+                district: college.district || 'Unknown',
+                specialised_in: college.specialised_in || '',
+                college_type: college.college_type || '',
+                rating: college.rating,
+                fees: college.fees,
+                website: college.website,
+                admission_link: college.admission_link,
+                courses_offered: college.courses_offered || [],
+                confidence_score: score,
+                match_reason: reason,
+                is_user_state: false,
+                location_priority: 'nationwide' as LocationPriority,
+                explanations,
+                confidence_band: (score >= 75 ? 'High' : score >= 50 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low'
+              };
+            })
+            .filter(college => college.confidence_score > 0);
+          
+          allColleges = [...allColleges, ...filteredNationalColleges];
+          console.log('[StreamRecommendations] Nationwide fallback added:', filteredNationalColleges.length);
+        }
+      }      
       // Sort by: location priority FIRST, then by score
       const sortedColleges = allColleges.sort((a, b) => {
         // Priority order: district > state > nearby > nationwide

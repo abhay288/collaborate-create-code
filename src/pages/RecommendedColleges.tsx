@@ -55,10 +55,12 @@ const RecommendedColleges = () => {
   const streamInfo = getStreamLabel();
   
   // Helper to clean college name (remove leading numeric IDs and UUIDs)
+  // Helper to clean college name (remove all UUIDs, leading/trailing numeric IDs)
   const cleanCollegeName = (name: string) => {
     return name
-      .replace(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\s*[-–]?\s*/i, '') // UUID prefix
-      .replace(/^\d+[\s\-+]+\s*/, '') // numeric prefix
+      .replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\s*[-–]?\s*/gi, '') // UUID anywhere
+      .replace(/^\d+[\s\-+]+\s*/, '') // leading numeric
+      .replace(/\s*[-–]\s*\d+\s*$/, '') // trailing numeric after dash
       .trim();
   };
 
@@ -240,9 +242,17 @@ const RecommendedColleges = () => {
                             <CardTitle className="text-lg line-clamp-2">
                               {cleanCollegeName(college.college_name)}
                             </CardTitle>
-                            <AvsarVerifiedBadge className="mt-1" />
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              <AvsarVerifiedBadge />
+                              {futureCourses.some(fc => college.courses_offered?.some(c => c.toLowerCase().includes(fc.name.toLowerCase().split(' ')[0]))) && (
+                                <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+                                  <Star className="h-2 w-2 mr-0.5 fill-current" />
+                                  Matches Your Goal
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <Badge variant="secondary" className="flex items-center gap-1 shrink-0">
+                          <Badge variant="secondary" className="flex items-center gap-1 shrink-0 bg-primary/10 text-primary border-primary/20">
                             {college.confidence_score}% match
                           </Badge>
                         </div>
