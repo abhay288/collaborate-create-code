@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, ArrowLeft, BookOpen, GraduationCap, Target, Calendar, Settings, MapPin } from "lucide-react";
+import { ArrowRight, ArrowLeft, BookOpen, GraduationCap, Target, Calendar, Settings, MapPin, Brain, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import AvsarLogo from "@/components/AvsarLogo";
@@ -108,6 +108,7 @@ const Onboarding = () => {
   const totalSteps = 10;
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
+  const [showQuizPrompt, setShowQuizPrompt] = useState(false);
 
   const [formData, setFormData] = useState({
     currentStudyLevel: "",
@@ -207,7 +208,7 @@ const Onboarding = () => {
       if (error) throw error;
 
       toast.success("Profile setup complete!");
-      navigate("/dashboard");
+      setShowQuizPrompt(true);
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error("Failed to save profile. Please try again.");
@@ -224,6 +225,58 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
+      {/* Post-Signup Quiz Prompt */}
+      {showQuizPrompt ? (
+        <Card className="w-full max-w-lg border-primary/20 shadow-2xl animate-scale-in">
+          <CardHeader className="text-center bg-gradient-to-r from-primary/10 to-accent/10 rounded-t-lg">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <Brain className="h-10 w-10 text-white" />
+            </div>
+            <CardTitle className="text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              🎉 Profile Setup Complete!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="text-center space-y-3">
+              <p className="text-lg font-medium text-foreground">
+                Ready to discover your ideal career path?
+              </p>
+              <p className="text-muted-foreground">
+                Take our AI-powered aptitude test to unlock personalized career recommendations, 
+                college suggestions, and scholarship matches tailored just for you.
+              </p>
+            </div>
+            <div className="bg-muted/50 p-4 rounded-xl border border-border space-y-2">
+              <h4 className="font-semibold text-sm flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" /> What you'll get:
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-1.5">
+                <li>🎯 Personalized career recommendations</li>
+                <li>🏫 College matches based on your aptitude</li>
+                <li>💰 Scholarship eligibility insights</li>
+                <li>📊 Detailed strengths & skills analysis</li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button 
+                size="lg" 
+                className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg h-14 gap-2"
+                onClick={() => navigate("/quiz")}
+              >
+                <Brain className="h-5 w-5" /> Take Aptitude Test Now
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="lg" 
+                className="w-full text-muted-foreground hover:text-foreground"
+                onClick={() => navigate("/dashboard")}
+              >
+                I'll do it later → Go to Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
       <Card className="w-full max-w-2xl border-primary/20 shadow-2xl">
         <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-t-lg">
           <div className="space-y-4">
@@ -473,6 +526,7 @@ const Onboarding = () => {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 };
