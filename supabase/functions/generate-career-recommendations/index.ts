@@ -257,7 +257,15 @@ Generate exactly 5 career/course recommendations ranked by suitability. Include 
 
     // Extract recommendations from tool call with validation
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    const textResponse = aiData.choices?.[0]?.message?.content;
+    
     if (!toolCall) {
+      if (textResponse) {
+        return new Response(
+          JSON.stringify({ error: textResponse, success: false, isGuidance: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       console.error('[RecommendationEngine] No tool call in AI response:', JSON.stringify(aiData));
       throw new Error('No tool call in AI response');
     }

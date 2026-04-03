@@ -133,8 +133,15 @@ Return structured tool calls only.`;
 
     const result = await response.json();
     const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+    const textResponse = result.choices?.[0]?.message?.content;
     
     if (!toolCall) {
+      if (textResponse) {
+        return new Response(JSON.stringify({ error: textResponse, isGuidance: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        });
+      }
       throw new Error("No roadmap generated");
     }
 
