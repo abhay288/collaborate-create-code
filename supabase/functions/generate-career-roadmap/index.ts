@@ -34,7 +34,12 @@ serve(async (req: Request) => {
     const language = profile?.preferred_language || 'en';
 
     // ========== GUARDRAILS: Block inappropriate/unprofessional inputs ==========
-    const BLOCKED_CAREERS = ['thief', 'chor', 'beggar', 'bhikhari', 'hitman', 'smuggler', 'drug dealer', 'scammer', 'fraudster', 'pickpocket', 'prostitute', 'terrorist', 'gangster', 'mafia', 'serial killer', 'dacoit', 'extortionist', 'blackmailer', 'pirate', 'kidnapper'];
+    const BLOCKED_CAREERS = [
+      'thief', 'chor', 'beggar', 'bhikhari', 'hitman', 'smuggler', 'drug dealer', 
+      'scammer', 'fraudster', 'pickpocket', 'prostitute', 'terrorist', 'gangster', 
+      'mafia', 'serial killer', 'dacoit', 'extortionist', 'blackmailer', 'pirate', 
+      'kidnapper', 'snatcher', 'robbery', 'illegal', 'smuggling', 'burglar'
+    ];
     
     const FUNNY_RESPONSES: Record<string, string> = {
       thief: "\ud83d\udea8 Sorry, AVSAR doesn't offer a B.Tech in Burglary! But Ethical Hacking pays \u20b915-50 LPA and you get PAID to break into systems. Much better benefits \u2014 no jail time! Try 'Cybersecurity Expert' instead. \ud83d\udd10",

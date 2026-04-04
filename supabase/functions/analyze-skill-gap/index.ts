@@ -26,6 +26,32 @@ serve(async (req) => {
     }
 
     const { careerId, careerTitle } = await req.json();
+
+    // ========== GUARDRAILS: Block inappropriate/unprofessional inputs ==========
+    const BLOCKED_CAREERS = [
+      'thief', 'chor', 'beggar', 'bhikhari', 'hitman', 'smuggler', 'drug dealer', 
+      'scammer', 'fraudster', 'pickpocket', 'prostitute', 'terrorist', 'gangster', 
+      'mafia', 'serial killer', 'dacoit', 'extortionist', 'blackmailer', 'pirate', 
+      'kidnapper', 'snatcher', 'robbery', 'illegal', 'smuggling', 'burglar'
+    ];
+    
+    const checkBlockedInput = (input: string): string | null => {
+      if (!input) return null;
+      const lower = input.toLowerCase().trim();
+      for (const blocked of BLOCKED_CAREERS) {
+        if (lower === blocked || lower.includes(blocked)) {
+          return "Sorry, we can't provide any information about this.";
+        }
+      }
+      return null;
+    };
+
+    const blockedMessage = checkBlockedInput(careerTitle);
+    if (blockedMessage) {
+      return new Response(JSON.stringify({ error: blockedMessage }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 

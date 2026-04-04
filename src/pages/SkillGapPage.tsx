@@ -43,6 +43,10 @@ export default function SkillGapPage() {
   const analyze = async () => {
     if (!careerTitle.trim()) { toast.error("Enter a career title"); return; }
     
+    // Reset previous result immediately to avoid 'ghosting' for blocked terms
+    setResult(null);
+    setCachedTitle("");
+    
     // Block inappropriate inputs
     if (isInappropriate(careerTitle)) {
       toast.error("Sorry, we can't provide any information about this.");
