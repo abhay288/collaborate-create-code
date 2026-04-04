@@ -31,7 +31,8 @@ export default function SkillGapPage() {
     'thief', 'chor', 'murderer', 'killer', 'terrorist', 'drug dealer',
     'smuggler', 'prostitute', 'beggar', 'scammer', 'fraudster', 'hacker',
     'assassin', 'robber', 'dacoit', 'gangster', 'pirate', 'kidnapper',
-    'crime', 'criminal', 'theft', 'murder', 'illegal', 'smuggling', 'robbery'
+    'crime', 'criminal', 'theft', 'murder', 'illegal', 'smuggling', 'robbery',
+    'snatcher', 'pickpocket', 'thieving', 'burglar', 'looter', 'gambler'
   ];
 
   const isInappropriate = (text: string) => {
