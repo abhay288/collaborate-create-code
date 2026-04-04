@@ -45,8 +45,28 @@ export default function CareerRoadmapPage() {
     setInitialLoading(false);
   };
 
+  // Inappropriate words blocklist
+  const BLOCKED_WORDS = [
+    'thief', 'chor', 'murderer', 'killer', 'terrorist', 'drug dealer',
+    'smuggler', 'prostitute', 'beggar', 'scammer', 'fraudster', 'hacker',
+    'assassin', 'robber', 'dacoit', 'gangster', 'pirate', 'kidnapper',
+    'crime', 'criminal', 'theft', 'murder', 'illegal', 'smuggling', 'robbery'
+  ];
+
+  const isInappropriate = (text: string) => {
+    const lower = text.toLowerCase().trim();
+    return BLOCKED_WORDS.some(word => lower.includes(word));
+  };
+
   const generate = async () => {
     if (!career.trim()) { toast.error("Enter a target career"); return; }
+    
+    // Block inappropriate inputs
+    if (isInappropriate(career)) {
+      toast.error("Sorry, we can't provide any information about this.");
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-career-roadmap", {

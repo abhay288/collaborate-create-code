@@ -30,7 +30,8 @@ export default function SkillGapPage() {
   const BLOCKED_WORDS = [
     'thief', 'chor', 'murderer', 'killer', 'terrorist', 'drug dealer',
     'smuggler', 'prostitute', 'beggar', 'scammer', 'fraudster', 'hacker',
-    'assassin', 'robber', 'dacoit', 'gangster', 'pirate', 'kidnapper'
+    'assassin', 'robber', 'dacoit', 'gangster', 'pirate', 'kidnapper',
+    'crime', 'criminal', 'theft', 'murder', 'illegal', 'smuggling', 'robbery'
   ];
 
   const isInappropriate = (text: string) => {
@@ -43,7 +44,7 @@ export default function SkillGapPage() {
     
     // Block inappropriate inputs
     if (isInappropriate(careerTitle)) {
-      toast.error("Please enter a valid, professional career title.");
+      toast.error("Sorry, we can't provide any information about this.");
       return;
     }
     
