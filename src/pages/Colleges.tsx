@@ -318,8 +318,12 @@ function CollegeCard({
   onToggleFavorite: () => void;
 }) {
   const collegeName = college?.college_name || college?.name || "Unknown College";
-  // Helper to clean college name (remove leading IDs)
-  const cleanCollegeName = collegeName.replace(/^\d+[\s\-+]+\s*/, '').replace(/^[a-f0-9-]+\s*[-–]\s*/i, '').trim() || collegeName;
+  // Helper to clean college name (remove leading IDs and (Id: ...) suffixes)
+  const cleanCollegeName = collegeName
+    .replace(/^\d+[\s\-+]+\s*/, '') // leading numeric IDs
+    .replace(/^[a-f0-9-]+\s*[-–]\s*/i, '') // UUID prefixes
+    .replace(/\s*\(Id:\s*[^)]+\)/gi, '') // (Id: ...) suffixes
+    .trim() || collegeName;
   
   // Helper to sanitize URL
   const sanitizeUrl = (url: string | null) => {

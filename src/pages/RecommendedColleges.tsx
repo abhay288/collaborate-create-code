@@ -61,6 +61,7 @@ const RecommendedColleges = () => {
       .replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\s*[-–]?\s*/gi, '') // UUID anywhere
       .replace(/^\d+[\s\-+]+\s*/, '') // leading numeric
       .replace(/\s*[-–]\s*\d+\s*$/, '') // trailing numeric after dash
+      .replace(/\s*\(Id:\s*[^)]+\)/gi, '') // (Id: ...) suffixes
       .trim();
   };
 
