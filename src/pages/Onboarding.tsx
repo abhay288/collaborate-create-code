@@ -135,10 +135,15 @@ const Onboarding = () => {
     
     if (data?.full_name) setUserName(data.full_name);
     
-    // Safety check: If already completed but landed here, show success prompt
-    if (data?.is_onboarding_complete && !sessionStorage.getItem('onboarding_just_completed')) {
-      setShowQuizPrompt(true);
-      sessionStorage.setItem('onboarding_just_completed', 'true');
+    // Safety check: If already completed but landed here, show success prompt or go to dashboard
+    if (data?.is_onboarding_complete) {
+      if (!sessionStorage.getItem('onboarding_just_completed')) {
+        setShowQuizPrompt(true);
+        sessionStorage.setItem('onboarding_just_completed', 'true');
+      } else {
+        // If they already completed it in this session and still reached here, let's just go home
+        navigate("/dashboard", { replace: true });
+      }
     }
   };
 

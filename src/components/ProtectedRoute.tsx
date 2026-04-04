@@ -28,6 +28,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
 
       try {
+        // Small delay to allow DB update propagation from Onboarding page
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_onboarding_complete, class_level, study_area, current_study_level')
@@ -49,7 +52,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     };
 
     checkOnboardingStatus();
-  }, [user]);
+  }, [user, location.pathname]);
 
   if (!user) {
     return <Navigate to="/login" replace />;
