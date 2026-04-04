@@ -129,10 +129,17 @@ const Onboarding = () => {
     if (!user) return;
     const { data } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, is_onboarding_complete')
       .eq('id', user.id)
       .single();
+    
     if (data?.full_name) setUserName(data.full_name);
+    
+    // Safety check: If already completed but landed here, show success prompt
+    if (data?.is_onboarding_complete && !sessionStorage.getItem('onboarding_just_completed')) {
+      setShowQuizPrompt(true);
+      sessionStorage.setItem('onboarding_just_completed', 'true');
+    }
   };
 
   const toggleInterest = (interest: string) => {
@@ -262,7 +269,7 @@ const Onboarding = () => {
               <Button 
                 size="lg" 
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg h-14 gap-2"
-                onClick={() => navigate("/quiz")}
+                onClick={() => window.location.href = "/quiz"}
               >
                 <Brain className="h-5 w-5" /> Take Aptitude Test Now
               </Button>
@@ -270,7 +277,7 @@ const Onboarding = () => {
                 variant="ghost" 
                 size="lg" 
                 className="w-full text-muted-foreground hover:text-foreground"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => window.location.href = "/dashboard"}
               >
                 I'll do it later → Go to Dashboard
               </Button>
