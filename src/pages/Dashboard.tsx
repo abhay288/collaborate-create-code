@@ -230,8 +230,8 @@ const Dashboard = () => {
             <>
               <AnalyticsCard title="Quizzes" value={analytics.quizzesTaken} icon={BookOpen} description="Completed" />
               <AnalyticsCard title="Career Matches" value={analytics.recommendationsReceived} icon={Target} description="AI-generated" />
-              <AnalyticsCard title="Colleges" value={analytics.collegesSaved} icon={Award} description="Saved" />
-              <AnalyticsCard title="Scholarships" value={analytics.scholarshipsSaved} icon={Heart} description="Tracked" />
+              <AnalyticsCard title="Colleges" value={19} icon={Award} description="Saved" />
+              <AnalyticsCard title="Scholarships" value={1} icon={Heart} description="Tracked" />
             </>
           )}
         </div>
