@@ -6,7 +6,7 @@ AVSAR is an AI-powered career guidance and educational recommendation platform d
 
 ---
 ## 🌐 Live Demo
-https://avsar1.netlify.app/
+(https://collaborate-create-code.vercel.app/)
 
 
 ## 🚀 Features
